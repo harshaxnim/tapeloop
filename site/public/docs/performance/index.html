@@ -9,7 +9,7 @@
 <meta property="og:title" content="Tapeloop performance report">
 <meta property="og:description" content="About 1 % of one CPU core, 13 MB plus the audio held, no disk writes.">
 <meta property="og:image" content="https://tapeloop.stream/img/og.png">
-<meta property="og:url" content="https://tapeloop.stream/performance/">
+<meta property="og:url" content="https://tapeloop.stream/docs/performance/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -18,10 +18,9 @@
 <body>
 <nav aria-label="Main">
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Tapeloop home"><img src="/img/wordmark.svg" alt="Tapeloop" width="71" height="17"></a>
+    <a class="brand" href="/" aria-label="Tapeloop home"><svg class="mark" viewBox="-14 -740 4068.3 980" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor"><g class="mark-l"><path d="M260.0 0Q211.0 0 180.5 30.5Q150.0 61 150.0 112V392H26.0V496H150.0V650H276.0V496H412.0V392H276.0V134Q276.0 104 304.0 104H400.0V0Z"/><path d="M650.0 -14Q597.0 -14 555.0 4.5Q513.0 23 488.5 58.5Q464.0 94 464.0 145Q464.0 196 488.5 230.5Q513.0 265 556.5 282.5Q600.0 300 656.0 300H792.0V328Q792.0 363 770.0 385.5Q748.0 408 700.0 408Q653.0 408 630.0 386.5Q607.0 365 600.0 331L484.0 370Q496.0 408 522.5 439.5Q549.0 471 593.5 490.5Q638.0 510 702.0 510Q800.0 510 857.0 461.0Q914.0 412 914.0 319V134Q914.0 104 942.0 104H982.0V0H898.0Q861.0 0 837.0 18.0Q813.0 36 813.0 66V67H794.0Q790.0 55 776.0 35.5Q762.0 16 732.0 1.0Q702.0 -14 650.0 -14ZM672.0 88Q725.0 88 758.5 117.5Q792.0 147 792.0 196V206H665.0Q630.0 206 610.0 191.0Q590.0 176 590.0 149Q590.0 122 611.0 105.0Q632.0 88 672.0 88Z"/><path d="M1044.0 -200V496H1168.0V436H1186.0Q1203.0 465 1239.0 487.5Q1275.0 510 1342.0 510Q1402.0 510 1453.0 480.5Q1504.0 451 1535.0 394.0Q1566.0 337 1566.0 256V240Q1566.0 159 1535.0 102.0Q1504.0 45 1453.0 15.5Q1402.0 -14 1342.0 -14Q1297.0 -14 1266.5 -3.5Q1236.0 7 1217.5 23.5Q1199.0 40 1188.0 57H1170.0V-200ZM1304.0 96Q1363.0 96 1401.5 133.5Q1440.0 171 1440.0 243V253Q1440.0 325 1401.0 362.5Q1362.0 400 1304.0 400Q1246.0 400 1207.0 362.5Q1168.0 325 1168.0 253V243Q1168.0 171 1207.0 133.5Q1246.0 96 1304.0 96Z"/><path d="M1878.0 -14Q1804.0 -14 1747.5 17.5Q1691.0 49 1659.5 106.5Q1628.0 164 1628.0 242V254Q1628.0 332 1659.0 389.5Q1690.0 447 1746.0 478.5Q1802.0 510 1876.0 510Q1949.0 510 2003.0 477.5Q2057.0 445 2087.0 387.5Q2117.0 330 2117.0 254V211H1756.0Q1758.0 160 1794.0 128.0Q1830.0 96 1882.0 96Q1935.0 96 1960.0 119.0Q1985.0 142 1998.0 170L2101.0 116Q2087.0 90 2060.5 59.5Q2034.0 29 1990.0 7.5Q1946.0 -14 1878.0 -14ZM1757.0 305H1989.0Q1985.0 348 1954.5 374.0Q1924.0 400 1875.0 400Q1824.0 400 1794.0 374.0Q1764.0 348 1757.0 305Z"/><path d="M2199.0 0V700H2325.0V0Z"/></g><g class="mark-c"><path d="M2450.41 0.00H3366.88A43.41 43.41 0 0 1 3410.29 43.41V593.29A43.41 43.41 0 0 1 3366.88 636.71H3189.92L3140.18 530.59H2677.12L2627.38 636.71H2450.41A43.41 43.41 0 0 1 2407.00 593.29V43.41A43.41 43.41 0 0 1 2450.41 0.00ZM2532.41 265.29A156.76 156.76 0 1 0 2845.94 265.29A156.76 156.76 0 1 0 2532.41 265.29ZM2631.29 265.29A57.88 57.88 0 1 0 2747.06 265.29A57.88 57.88 0 1 0 2631.29 265.29ZM2971.35 265.29A156.76 156.76 0 1 0 3284.88 265.29A156.76 156.76 0 1 0 2971.35 265.29ZM3070.24 265.29A57.88 57.88 0 1 0 3186.00 265.29A57.88 57.88 0 1 0 3070.24 265.29Z" fill-rule="evenodd"/></g><g class="mark-r"><path d="M3492.294117647059 -200V496H3616.294117647059V436H3634.294117647059Q3651.294117647059 465 3687.294117647059 487.5Q3723.294117647059 510 3790.294117647059 510Q3850.294117647059 510 3901.294117647059 480.5Q3952.294117647059 451 3983.294117647059 394.0Q4014.294117647059 337 4014.294117647059 256V240Q4014.294117647059 159 3983.294117647059 102.0Q3952.294117647059 45 3901.294117647059 15.5Q3850.294117647059 -14 3790.294117647059 -14Q3745.294117647059 -14 3714.794117647059 -3.5Q3684.294117647059 7 3665.794117647059 23.5Q3647.294117647059 40 3636.294117647059 57H3618.294117647059V-200ZM3752.294117647059 96Q3811.294117647059 96 3849.794117647059 133.5Q3888.294117647059 171 3888.294117647059 243V253Q3888.294117647059 325 3849.294117647059 362.5Q3810.294117647059 400 3752.294117647059 400Q3694.294117647059 400 3655.294117647059 362.5Q3616.294117647059 325 3616.294117647059 253V243Q3616.294117647059 171 3655.294117647059 133.5Q3694.294117647059 96 3752.294117647059 96Z"/></g></g></svg></a>
     <ul>
-      <li><a href="/docs/">Docs</a></li>
-      <li class="hide-s"><a class="current" href="/performance/">Performance</a></li>
+      <li><a class="current" href="/docs/">Docs</a></li>
       <li class="hide-s"><a href="https://github.com/harshaxnim/tapeloop">GitHub</a></li>
       <li><a class="pill" href="https://github.com/harshaxnim/tapeloop/releases/latest">Download</a></li>
     </ul>
@@ -29,14 +28,15 @@
 </nav>
 
 <header class="page-head wrap">
-  <p class="eyebrow">Performance report</p>
+  <p class="eyebrow"><a href="/docs/">Docs</a> › Performance</p>
   <h1>Barely there.</h1>
   <p class="lede">Measured on a MacBook Air with an Apple M2, macOS 14.6, during an ordinary working session, with both sources recording. 17 November 2026, Tapeloop 0.1.0.</p>
 </header>
 
 <div class="doc">
   <aside class="toc" aria-label="Contents">
-    <p>Contents</p>
+    <p><a href="/docs/">← Docs</a></p>
+    <p>Performance</p>
     <ol>
       <li><a href="#app">The running app</a></li>
       <li><a href="#changes">What changed</a></li>
@@ -129,7 +129,7 @@ swift build -c release --product TapeloopBench
 <footer>
   <div class="wrap">
     <span>Tapeloop is open source under the MIT licence. Transcription uses transcribe.cpp and NVIDIA Parakeet (CC BY 4.0).</span>
-    <span><a href="/docs/">Docs</a> · <a href="/performance/">Performance</a> · <a href="https://github.com/harshaxnim/tapeloop">GitHub</a> · <a href="https://github.com/harshaxnim/tapeloop/issues">Report an issue</a> · <a href="https://github.com/harshaxnim/tapeloop/blob/main/THIRD_PARTY_NOTICES.md">Notices</a></span>
+    <span><a href="/docs/">Docs</a> · <a href="https://github.com/harshaxnim/tapeloop">GitHub</a> · <a href="https://github.com/harshaxnim/tapeloop/issues">Report an issue</a> · <a href="https://github.com/harshaxnim/tapeloop/blob/main/THIRD_PARTY_NOTICES.md">Notices</a></span>
   </div>
 </footer>
 </body>

@@ -57,8 +57,7 @@
             name: String, state: PopoverState, selection: TimeInterval, quick: Int?
         )] {
             let recording = PopoverState(
-                status: .recording, title: "Recording to memory", stat: "2 h kept · 41 MB",
-                subtitle: "Nothing is written to disk until you save.",
+                status: .recording, title: "Recording to memory", stat: "2 h kept",
                 timeline: timeline(meetings: [(0.52, 0.86, "Zoom · 10:41")], marks: [(0.79, "decision"), (0.2, nil)]))
             var meeting = recording
             meeting.subtitle = nil
@@ -70,7 +69,7 @@
             saving.subtitle = nil
             saving.saving = .init(label: "Saving 1 h 00 min…", progress: 0.64)
             var paused = PopoverState(
-                status: .paused, title: "Paused", stat: "1 h 12 min kept · 26 MB",
+                status: .paused, title: "Paused", stat: "1 h 12 min kept",
                 subtitle: "Paused at 11:02. Nothing is being recorded.",
                 timeline: timeline(gaps: [(0.317, 0.375), (0.82, 1)], meetings: [(0.52, 0.6, nil)]), isPaused: true)
             paused.timeline.lanes = paused.timeline.lanes.map { lane in
@@ -79,7 +78,7 @@
                 return lane
             }
             let started = PopoverState(
-                status: .recording, title: "Recording to memory", stat: "4 min kept · 1.3 MB",
+                status: .recording, title: "Recording to memory", stat: "4 min kept",
                 subtitle: "Started at 11:20. Keeps up to 2 hours; older audio is dropped as new audio arrives.",
                 timeline: timeline(hours: 0.25, held: 240, gaps: []))
             let permission = PopoverState(
@@ -91,7 +90,7 @@
                 timeline: timeline(gaps: [], systemFlat: true))
             let disk = PopoverState(
                 status: .recording, title: "Recording to memory and disk", stat: "5 h kept",
-                subtitle: "Newest 3 h 40 min in memory (500 MB) · older 1 h 20 min on disk (180 MB), erased on quit.",
+                subtitle: "The older 1 h 20 min is on disk and is erased when Tapeloop quits.",
                 timeline: timeline(hours: 5, meetings: [(0.52, 0.86, nil)]))
             return [
                 ("recording", recording, 36 * 60, nil), ("meeting", meeting, 38 * 60, nil),

@@ -10,7 +10,7 @@
         public var status: RecorderStatus
         /// The headline, for example "Recording to memory".
         public var title: String
-        /// The right-hand figure, for example "2 h kept · 41 MB".
+        /// The right-hand figure, for example "2 h kept".
         public var stat: String?
         /// The line under the headline.
         public var subtitle: String?

@@ -204,7 +204,7 @@
         /// The ongoing meeting, if any.
         var ongoingMeeting: MeetingSpan? { meetings.last { $0.isOngoing } }
 
-        /// One line for the menu's header: "Recording to memory · 2 h kept · 41 MB".
+        /// One line for the menu's header: "Recording to memory · 2 h kept".
         var menuHeader: String {
             let state = popover.state
             return [state.title, state.stat].compactMap { $0 }.joined(separator: " · ")
@@ -236,7 +236,6 @@
                 gaps: TimelineData.gaps(in: tracks).filter { $0.end > start })
             if held <= 0 { timeline.heldStart = nil }
 
-            let mb = { (bytes: Int) in ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .decimal) }
             let kept = held > 0 ? "\(DurationText.long(held)) kept" : nil
             var state: PopoverState
             if let problem = problemBanner() {
@@ -247,8 +246,7 @@
             } else if status.isPaused || !status.isRecording {
                 let since = pausedAt.map { "Paused at \(Self.time($0)). " } ?? ""
                 state = PopoverState(
-                    status: .paused, title: "Paused",
-                    stat: [kept, held > 0 ? mb(status.bytesInRAM) : nil].compactMap { $0 }.joined(separator: " · "),
+                    status: .paused, title: "Paused", stat: kept,
                     subtitle: suspendReasons.isEmpty || status.isPaused
                         ? "\(since)Nothing is being recorded."
                         : "Recording pauses while the Mac sleeps or the screen is locked.",
@@ -258,16 +256,16 @@
                 state = PopoverState(
                     status: .recording, title: "Recording to memory and disk", stat: kept,
                     subtitle:
-                        "Newest \(DurationText.long(ramPart)) in memory (\(mb(status.bytesInRAM))) · older \(DurationText.long(held - ramPart)) on disk (\(mb(status.bytesOnDisk))), erased on quit.",
+                        "The older \(DurationText.long(held - ramPart)) is on disk and is erased when Tapeloop quits.",
                     timeline: timeline)
             } else {
-                let subtitle =
+                // A hint only while the tape is new; after that the header is a single line.
+                let subtitle: String? =
                     held < 600
                     ? "Started at \(Self.time(status.range?.start ?? now)). Keeps up to \(DurationText.long(settings.recorder.bufferDuration)); older audio is dropped as new audio arrives."
-                    : "Nothing is written to disk until you save."
+                    : nil
                 state = PopoverState(
-                    status: .recording, title: "Recording to memory",
-                    stat: [kept, mb(status.bytesInRAM)].compactMap { $0 }.joined(separator: " · "), subtitle: subtitle,
+                    status: .recording, title: "Recording to memory", stat: kept, subtitle: subtitle,
                     timeline: timeline)
             }
             if state.banner == nil, let meeting = ongoingMeeting {

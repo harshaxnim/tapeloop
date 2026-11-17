@@ -2,7 +2,8 @@
     import SwiftUI
     import TapeloopCore
 
-    /// The menu bar popover: status, the rewind timeline, quick spans, Save, and the tool row.
+    /// The menu bar popover: status, the rewind timeline, quick spans, Save, and the tool row. Kept minimal: one header
+    /// line, the tape, its two ends, the spans with Save, and four icon buttons (labels are in their tooltips).
     public struct PopoverView: View {
         @Bindable var model: PopoverModel
         @FocusState private var labelFocused: Bool
@@ -19,8 +20,8 @@
                 header
                 if let banner = state.banner { bannerView(banner).padding(.top, 10) }
                 if state.timeline.held > 0 || state.status != .needsAttention {
-                    TimelineView(model: model).padding(.top, 34)
-                    ticks.padding(.top, 4)
+                    TimelineView(model: model).padding(.top, 16)
+                    ticks.padding(.top, 3)
                 }
                 if let saving = state.saving {
                     savingView(saving).padding(.top, 12)
@@ -29,7 +30,7 @@
                 } else {
                     chips.padding(.top, 12)
                 }
-                tools.padding(.top, 12)
+                tools.padding(.top, 8)
             }
             .padding(14)
             .frame(width: 380)
@@ -49,7 +50,7 @@
                     }
                 }
                 if let subtitle = state.subtitle {
-                    Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -112,26 +113,25 @@
 
         // MARK: Ticks, chips, saving, bookmark
 
+        /// The two ends of the tape: how far back it reaches, and now.
         private var ticks: some View {
-            let span = state.timeline.span
-            return HStack {
-                ForEach(0..<5, id: \.self) { index in
-                    Text(DurationText.tick(span * Double(4 - index) / 4))
-                    if index < 4 { Spacer(minLength: 0) }
-                }
+            HStack {
+                Text(DurationText.tick(state.timeline.span))
+                Spacer(minLength: 0)
+                Text(DurationText.tick(0))
             }
-            .font(.system(size: 11).monospacedDigit())
-            .foregroundStyle(.secondary)
+            .font(.system(size: 10.5).monospacedDigit())
+            .foregroundStyle(.tertiary)
         }
 
         private var chips: some View {
             let held = state.timeline.held
-            return HStack(spacing: 6) {
+            return HStack(spacing: 0) {
                 ForEach(PopoverModel.quickSpans, id: \.self) { minutes in
                     let enabled =
                         held > 0 && (minutes == PopoverModel.quickSpans[0] || Double(minutes) * 60 <= held + 30)
                     Button(minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h") { model.choose(minutes: minutes) }
-                        .buttonStyle(ChipStyle(selected: model.quickMinutes == minutes))
+                        .buttonStyle(SpanButtonStyle(selected: model.quickMinutes == minutes))
                         .disabled(!enabled)
                         .reportFrame("chip-\(minutes)", to: model)
                         .help("Select the last \(minutes < 60 ? "\(minutes) minutes" : "hour")")
@@ -207,56 +207,70 @@
         // MARK: Tools
 
         private var tools: some View {
-            VStack(spacing: 0) {
-                Rectangle().fill(Tape.line).frame(height: 1).padding(.bottom, 10)
-                HStack(spacing: 2) {
-                    Button {
-                        model.actions.togglePause()
-                    } label: {
-                        Label(
-                            state.isPaused ? "Resume" : "Pause",
-                            systemImage: state.isPaused ? "play.fill" : "pause.fill")
-                    }
-                    .help(state.isPaused ? "Resume recording" : "Pause recording; what is kept stays")
-                    .reportFrame("pause", to: model)
-                    Button {
-                        model.bookmark()
-                    } label: {
-                        Label("Bookmark", systemImage: "bookmark")
-                    }
-                    .disabled(state.isPaused || state.status == .paused)
-                    .help("Mark this moment on the timeline")
-                    .reportFrame("bookmark", to: model)
-                    Spacer()
-                    Button {
-                        model.actions.openLibrary()
-                    } label: {
-                        Label("Library", systemImage: "books.vertical")
-                    }
-                    .help("Your saved recordings")
-                    .reportFrame("library", to: model)
-                    Button {
-                        model.actions.openSettings()
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .help("Settings")
-                    .accessibilityLabel("Settings")
-                    .reportFrame("settings", to: model)
+            HStack(spacing: 0) {
+                Button {
+                    model.actions.togglePause()
+                } label: {
+                    Image(systemName: state.isPaused ? "play.fill" : "pause.fill")
                 }
-                .buttonStyle(ToolButtonStyle())
-                .labelStyle(.titleAndIcon)
+                .help(state.isPaused ? "Resume recording" : "Pause recording; what is kept stays")
+                .accessibilityLabel(state.isPaused ? "Resume" : "Pause")
+                .reportFrame("pause", to: model)
+                Button {
+                    model.bookmark()
+                } label: {
+                    Image(systemName: "bookmark")
+                }
+                .disabled(state.isPaused || state.status == .paused)
+                .help("Bookmark this moment")
+                .accessibilityLabel("Bookmark")
+                .reportFrame("bookmark", to: model)
+                Spacer()
+                Button {
+                    model.actions.openLibrary()
+                } label: {
+                    Image(systemName: "books.vertical")
+                }
+                .help("Library: your saved recordings")
+                .accessibilityLabel("Library")
+                .reportFrame("library", to: model)
+                Button {
+                    model.actions.openSettings()
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .help("Settings")
+                .accessibilityLabel("Settings")
+                .reportFrame("settings", to: model)
             }
+            .buttonStyle(ToolButtonStyle())
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    /// A quick span (5 min, 15 min, …): plain text, amber when chosen.
+    struct SpanButtonStyle: ButtonStyle {
+        var selected: Bool
+        @Environment(\.isEnabled) private var isEnabled
+
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(.system(size: 12, weight: selected ? .semibold : .medium).monospacedDigit())
+                .foregroundStyle(selected ? Tape.amber : Color.secondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(selected ? Tape.amber.opacity(0.14) : .clear))
+                .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.35)
+                .contentShape(Rectangle())
         }
     }
 
     /// The rewind timeline: two level lanes, meetings, gaps, bookmarks, and the draggable selection.
     struct TimelineView: View {
         @Bindable var model: PopoverModel
-        static let height: CGFloat = 84
-        static let tipWidth: CGFloat = 76
-        private let laneTops: [CGFloat] = [22, 52]
-        private let laneHeight: CGFloat = 26
+        static let height: CGFloat = 70
+        private let laneTops: [CGFloat] = [16, 43]
+        private let laneHeight: CGFloat = 24
 
         private var data: TimelineData { model.state.timeline }
 
@@ -266,41 +280,18 @@
                 let selectionX = x(forSecondsBack: model.clampedSelection, width: width)
                 ZStack(alignment: .topLeading) {
                     Canvas { context, size in draw(in: &context, size: size, selectionX: selectionX) }
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(data.lanes.enumerated()), id: \.offset) { _, lane in
-                            Text(lane.label).font(.system(size: 9.5)).foregroundStyle(.secondary)
-                                .padding(.horizontal, 3)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 2).fill(
-                                        Color(nsColor: .windowBackgroundColor).opacity(0.85))
-                                )
-                                .frame(height: 30)
-                        }
-                    }
-                    .padding(.top, 20)
-                    .allowsHitTesting(false)
                     if data.held > 0 {
-                        Rectangle().fill(Tape.amber.opacity(0.18))
+                        Rectangle().fill(Tape.amber.opacity(0.08))
                             .frame(width: max(0, width - selectionX), height: Self.height)
                             .offset(x: selectionX)
                             .allowsHitTesting(false)
-                        Rectangle().fill(Tape.amber).frame(width: 2, height: Self.height).offset(x: selectionX - 1)
+                        Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.height).offset(x: selectionX - 0.75)
                             .allowsHitTesting(false)
-                        handle.offset(x: selectionX - 8, y: -4)
-                        // A fixed-width box centred on the handle (an offset, not an alignment guide, so the
-                        // timeline's own layout never grows), kept inside the timeline at both ends.
-                        Text(DurationText.tick(model.clampedSelection))
-                            .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(Color(nsColor: .windowBackgroundColor))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.primary))
-                            .fixedSize()
-                            .frame(width: Self.tipWidth)
-                            .offset(x: min(max(selectionX - Self.tipWidth / 2, 0), width - Self.tipWidth), y: -28)
-                            .allowsHitTesting(false)
+                        handle.offset(x: selectionX - 7, y: -2)
                     }
                 }
                 .contentShape(Rectangle())
+                .help("Top: your microphone. Bottom: your Mac's sound. Drag to choose how far back to save.")
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { value in
                         let target = secondsBack(atX: value.location.x, width: width)
@@ -331,11 +322,11 @@
 
         private var handle: some View {
             RoundedRectangle(cornerRadius: 2).fill(Tape.amber)
-                .frame(width: 16, height: 22)
+                .frame(width: 14, height: 18)
                 .overlay(
                     HStack(spacing: 3) {
-                        Rectangle().frame(width: 1.5, height: 10)
-                        Rectangle().frame(width: 1.5, height: 10)
+                        Rectangle().frame(width: 1.5, height: 8)
+                        Rectangle().frame(width: 1.5, height: 8)
                     }
                     .foregroundStyle(Color.black.opacity(0.55))
                 )
@@ -373,32 +364,26 @@
                 let x1 = min(width, xOf(meeting.end, width: width))
                 guard x1 > x0 else { continue }
                 context.fill(
-                    Path(CGRect(x: x0, y: 16, width: x1 - x0, height: height - 16)),
-                    with: .color(Tape.meeting.opacity(0.14)))
-                context.fill(Path(CGRect(x: x0, y: 16, width: x1 - x0, height: 2)), with: .color(Tape.meeting))
-                if let label = meeting.label, x1 - x0 > 40 {
-                    context.draw(
-                        Text(label).font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Tape.meeting),
-                        at: CGPoint(x: x0 + 4, y: height - 3), anchor: .bottomLeading)
-                }
+                    Path(CGRect(x: x0, y: 12, width: x1 - x0, height: height - 12)),
+                    with: .color(Tape.meeting.opacity(0.09)))
+                context.fill(Path(CGRect(x: x0, y: 12, width: x1 - x0, height: 1.5)), with: .color(Tape.meeting))
             }
             // Gaps (sleep, pause), hatched.
             for gap in data.gaps {
                 let x0 = max(0, xOf(gap.start, width: width))
                 let x1 = min(width, xOf(gap.end, width: width))
                 guard x1 > x0 else { continue }
-                let rect = CGRect(x: x0, y: 18, width: x1 - x0, height: height - 18)
-                context.fill(Path(rect), with: .color(Color.primary.opacity(0.05)))
+                let rect = CGRect(x: x0, y: 14, width: x1 - x0, height: height - 14)
                 var hatch = Path()
-                var hx = x0 - (height - 18)
+                var hx = x0 - (height - 14)
                 while hx < x1 {
                     hatch.move(to: CGPoint(x: hx, y: height))
-                    hatch.addLine(to: CGPoint(x: hx + (height - 18), y: 18))
+                    hatch.addLine(to: CGPoint(x: hx + (height - 14), y: 14))
                     hx += 6
                 }
                 context.drawLayer { layer in
                     layer.clip(to: Path(rect))
-                    layer.stroke(hatch, with: .color(Color.primary.opacity(0.18)), lineWidth: 1)
+                    layer.stroke(hatch, with: .color(Color.primary.opacity(0.12)), lineWidth: 1)
                 }
             }
             // Level lanes.
@@ -419,8 +404,8 @@
                     let rect = CGRect(x: x + 0.5, y: top + (laneHeight - h) / 2, width: max(1, step - 1), height: h)
                     if x + step / 2 >= selectionX { inSelection.addRect(rect) } else { outside.addRect(rect) }
                 }
-                context.fill(quiet, with: .color(Color.primary.opacity(0.15)))
-                context.fill(outside, with: .color(Color.primary.opacity(0.38)))
+                context.fill(quiet, with: .color(Color.primary.opacity(0.12)))
+                context.fill(outside, with: .color(Color.primary.opacity(0.3)))
                 context.fill(inSelection, with: .color(Tape.amber))
             }
             // Bookmarks.
@@ -428,20 +413,15 @@
                 let x = xOf(mark.date, width: width)
                 guard x >= 0, x <= width else { continue }
                 context.fill(
-                    Path(CGRect(x: x, y: 2, width: 1.5, height: height - 2)), with: .color(Color.primary.opacity(0.5)))
+                    Path(CGRect(x: x, y: 2, width: 1, height: height - 2)), with: .color(Color.primary.opacity(0.35)))
                 var flag = Path()
                 flag.move(to: CGPoint(x: x, y: 2))
-                flag.addLine(to: CGPoint(x: x + 9, y: 2))
-                flag.addLine(to: CGPoint(x: x + 6.5, y: 5.5))
-                flag.addLine(to: CGPoint(x: x + 9, y: 9))
-                flag.addLine(to: CGPoint(x: x, y: 9))
+                flag.addLine(to: CGPoint(x: x + 7, y: 2))
+                flag.addLine(to: CGPoint(x: x + 5, y: 4.75))
+                flag.addLine(to: CGPoint(x: x + 7, y: 7.5))
+                flag.addLine(to: CGPoint(x: x, y: 7.5))
                 flag.closeSubpath()
-                context.fill(flag, with: .color(.primary))
-                if let label = mark.label, x < width - 40 {
-                    context.draw(
-                        Text(label).font(.system(size: 9.5)).foregroundStyle(.secondary),
-                        at: CGPoint(x: x + 11, y: 2), anchor: .topLeading)
-                }
+                context.fill(flag, with: .color(Color.primary.opacity(0.8)))
             }
         }
 

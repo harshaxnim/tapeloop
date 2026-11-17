@@ -7,6 +7,10 @@ export default {
       url.hostname = "tapeloop.stream";
       return Response.redirect(url.toString(), 301);
     }
+    // The performance report moved into the docs.
+    if (url.pathname === "/performance" || url.pathname.startsWith("/performance/")) {
+      return Response.redirect("https://tapeloop.stream/docs/performance/", 301);
+    }
     return env.ASSETS.fetch(request);
   },
 };
