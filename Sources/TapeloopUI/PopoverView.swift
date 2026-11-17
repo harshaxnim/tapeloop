@@ -43,12 +43,37 @@
                 .fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button(status == .recording ? "Pause" : "Resume", action: onTogglePause)
+                        .buttonStyle(TapeButtonStyle(prominent: true))
                     Spacer()
                     Button("Quit Tapeloop", action: onQuit)
+                        .buttonStyle(TapeButtonStyle())
                 }
             }
             .padding(16)
             .frame(width: 360)
+        }
+    }
+
+    /// Tapeloop's button look: a rounded pill drawn in SwiftUI (so snapshots render it too).
+    public struct TapeButtonStyle: ButtonStyle {
+        var prominent = false
+
+        /// Creates the style; `prominent` fills it with the accent colour.
+        public init(prominent: Bool = false) {
+            self.prominent = prominent
+        }
+
+        public func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .foregroundStyle(prominent ? Color.white : Color.primary)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(prominent ? Color.accentColor : Color.primary.opacity(0.08))
+                )
+                .opacity(configuration.isPressed ? 0.7 : 1)
         }
     }
 #endif
