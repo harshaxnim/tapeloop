@@ -292,4 +292,9 @@ Other risks and their answers:
 - **s5:** docs, self-review, `v0.1.0`, verify released DMG, report, the Telegram message.
 
 ## 8. s1 result
-(Filled in at the end of s1.)
+- Repo is public at https://github.com/harshaxnim/rearview with the scaffold (all files above).
+- **Blocked:** the mini's GitHub login lacks the `workflow` scope, so GitHub refused the push of
+  `.github/workflows/ci.yml`. The workflow is parked in `ci/ci.yml`. As soon as the scope is
+  granted (or Harsha moves the file on github.com), `git mv ci/ci.yml .github/workflows/ci.yml`,
+  push, and iterate until CI is green; then fill in this section with the run link and DMG checks.
+- No local Swift toolchain was installed (the mini is shared and low on memory; CI is the compiler).
