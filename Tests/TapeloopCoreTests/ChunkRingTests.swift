@@ -40,7 +40,8 @@ final class ChunkRingTests: XCTestCase {
         ring.append(chunk(at: 0))
         ring.append(chunk(at: 5))
         ring.append(chunk(at: 100))  // a sleep gap from 10 s to 100 s
-        let picked = ring.chunks(overlapping: TimeRange(start: t0.addingTimeInterval(7), end: t0.addingTimeInterval(101)))
+        let picked = ring.chunks(
+            overlapping: TimeRange(start: t0.addingTimeInterval(7), end: t0.addingTimeInterval(101)))
         XCTAssertEqual(picked.count, 2)
         XCTAssertEqual(ring.gaps(), [TimeRange(start: t0.addingTimeInterval(10), end: t0.addingTimeInterval(100))])
         XCTAssertEqual(ring.heldDuration, 15)
