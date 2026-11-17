@@ -1,0 +1,14 @@
+<!-- Tapeloop menu bar icon, 25 x 17 units (drawn at 27 x 18 pt). The cassette upside down (notch on top) with the
+     status dot at the bottom-right: amber #FF9F0A recording, grey #8E8E93 paused, a red #FF3B30 ring when a permission
+     is missing. Drawn in code by Sources/TapeloopUI/CassetteIcon.swift; geometry in CassetteGeometry (Theme.swift). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="25" height="17" viewBox="0 0 25 17">
+  <mask id="cut" maskUnits="userSpaceOnUse" x="-1" y="-1" width="27" height="19">
+    <rect x="-1" y="-1" width="27" height="19" fill="#fff"/>
+    <circle cx="6.35" cy="8.9" r="3.25" fill="#000"/><circle cx="15.45" cy="8.9" r="3.25" fill="#000"/>
+    <polygon points="4.6,0.2 6.1,3.4 15.7,3.4 17.2,0.2" fill="#000"/>
+    <circle cx="21.6" cy="13.7" r="3.55" fill="#000"/>
+  </mask>
+  <rect x=".5" y="1.2" width="20.8" height="13.2" rx=".9" fill="#000" mask="url(#cut)"/>
+  <circle cx="6.35" cy="8.9" r="1.2" fill="#000"/><circle cx="15.45" cy="8.9" r="1.2" fill="#000"/>
+  <circle cx="21.6" cy="13.7" r="2.65" fill="#FF9F0A"/>
+</svg>

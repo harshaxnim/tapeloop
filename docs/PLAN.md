@@ -1,5 +1,10 @@
 # Tapeloop: the plan
 
+> **Historical design record.** This is the plan written before v0.1.0. For how the code works now, read
+> [ARCHITECTURE.md](ARCHITECTURE.md); for testing, [TESTING.md](TESTING.md). Some details below changed during the
+> build (for example the menu bar icon source and the memory figures: two 48 kbps sources need about 43 MB per hour,
+> not 78 MB).
+
 Tapeloop is an open-source macOS menu bar app that always keeps the last minutes (up to hours) of the microphone
 and the system audio, **compressed, in memory**, so that a user can save a conversation, a call or a lecture after
 it happened. Nothing touches the disk until the user saves. This file is the converged output of the `/feature-dev`

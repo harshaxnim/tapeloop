@@ -9,5 +9,6 @@
         static let mic = Logger(subsystem: TapeloopInfo.bundleIdentifier, category: "mic")
         static let tap = Logger(subsystem: TapeloopInfo.bundleIdentifier, category: "system-audio")
         static let probe = Logger(subsystem: TapeloopInfo.bundleIdentifier, category: "probe")
+        static let engine = Logger(subsystem: TapeloopInfo.bundleIdentifier, category: "engine")
     }
 #endif

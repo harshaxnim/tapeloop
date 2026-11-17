@@ -1,16 +1,15 @@
-<!-- Tapeloop app icon source (1024x1024). scripts/make-icon.swift draws the same design. -->
+<!-- Tapeloop app icon source (1024 x 1024): the cassette (notch on top), white #F4F4F5, on a flat graphite #1C1C1E tile
+     in Apple's standard icon area (824 pt, corner 185). No gradients, no status dot. scripts/make-icon.swift draws it. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#F2A541"/><stop offset="1" stop-color="#D9572B"/>
-    </linearGradient>
-  </defs>
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
-  <rect x="170" y="270" width="684" height="460" rx="56" fill="#26221F"/>
-  <rect x="230" y="320" width="564" height="200" rx="28" fill="#F4ECDD"/>
-  <rect x="300" y="370" width="424" height="100" rx="50" fill="#3A332D"/>
-  <circle cx="370" cy="420" r="40" fill="#F4ECDD"/><circle cx="654" cy="420" r="40" fill="#F4ECDD"/>
-  <circle cx="370" cy="420" r="14" fill="#26221F"/><circle cx="654" cy="420" r="14" fill="#26221F"/>
-  <path d="M330 730 L370 620 L654 620 L694 730 Z" fill="#3A332D"/>
-  <circle cx="790" cy="300" r="46" fill="#E53935" stroke="#26221F" stroke-width="16"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#1C1C1E"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="#FFFFFF" stroke-opacity=".1" stroke-width="4"/>
+  <g transform="translate(176.3 228.6) scale(30.8)">
+    <mask id="cut" maskUnits="userSpaceOnUse" x="-1" y="0" width="24" height="18">
+      <rect x="-1" y="0" width="24" height="18" fill="#fff"/>
+      <circle cx="6.35" cy="10.3" r="3.25" fill="#000"/><circle cx="15.45" cy="10.3" r="3.25" fill="#000"/>
+      <polygon points="4.6,1.6 6.1,4.8 15.7,4.8 17.2,1.6" fill="#000"/>
+    </mask>
+    <rect x=".5" y="2.6" width="20.8" height="13.2" rx=".9" fill="#F4F4F5" mask="url(#cut)"/>
+    <circle cx="6.35" cy="10.3" r="1.2" fill="#F4F4F5"/><circle cx="15.45" cy="10.3" r="1.2" fill="#F4F4F5"/>
+  </g>
 </svg>

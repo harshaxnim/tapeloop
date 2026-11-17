@@ -33,7 +33,7 @@
             if await MicrophoneSource.requestPermission() {
                 do {
                     let sink = CaptureSink(encoder: try AACEncoder(source: .microphone), maxDuration: 3600)
-                    try mic.start { buffer in sink.consume(buffer) }
+                    try mic.start(onBuffer: { buffer, time in sink.consume(buffer, at: time) }, onEvent: { _ in })
                     micRunning = true
                     sinks.append((.microphone, sink))
                     say("microphone: started")
@@ -49,7 +49,7 @@
                 let tap = SystemAudioTap()
                 do {
                     let sink = CaptureSink(encoder: try AACEncoder(source: .system), maxDuration: 3600)
-                    try tap.start { buffer in sink.consume(buffer) }
+                    try tap.start(onBuffer: { buffer, time in sink.consume(buffer, at: time) }, onEvent: { _ in })
                     stopTap = { tap.stop() }
                     sinks.append((.system, sink))
                     say("system audio: started (process tap, format \(tap.format?.description ?? "?"))")

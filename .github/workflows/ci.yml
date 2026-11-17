@@ -51,8 +51,10 @@ jobs:
         run: make lint
       - name: No network code
         run: |
-          if grep -rnE 'URLSession|NWConnection|URLRequest' Sources; then
-            echo "Tapeloop must not make network calls"; exit 1
+          # The only network code allowed is the speech-model download the user starts
+          # (Sources/TapeloopParakeet/ModelDownloader.swift, from Tapeloop's own GitHub release).
+          if grep -rnE 'URLSession|NWConnection|URLRequest|CFSocket|NSStream' Sources | grep -v '^Sources/TapeloopParakeet/ModelDownloader.swift:'; then
+            echo "Network code is only allowed in ModelDownloader.swift"; exit 1
           fi
       - name: Build (warnings are errors)
         run: swift build -Xswiftc -warnings-as-errors

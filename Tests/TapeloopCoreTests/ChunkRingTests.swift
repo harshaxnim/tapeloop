@@ -26,6 +26,28 @@ final class ChunkRingTests: XCTestCase {
         XCTAssertEqual(ring.bytes, 4 * ring.chunks[0].byteCost)
     }
 
+    func testClockSetBackKeepsTheRingInOrder() {
+        var ring = ChunkRing(maxDuration: 20)
+        ring.append(chunk(at: 0))
+        ring.append(chunk(at: 5))
+        // The clock goes back an hour: the next chunks follow on from the newest one instead.
+        ring.append(chunk(at: -3600))
+        ring.append(chunk(at: -3595))
+        XCTAssertEqual(ring.chunks.map { $0.start.timeIntervalSince(t0) }, [0, 5, 10, 15])
+        XCTAssertEqual(ring.range?.duration, 20)
+        XCTAssertTrue(ring.gaps().isEmpty)
+        // Trimming still works: the oldest falls out as new audio arrives.
+        ring.append(chunk(at: -3590))
+        XCTAssertEqual(ring.range?.duration, 20)
+    }
+
+    func testSmallJitterIsNotTreatedAsTheClockGoingBack() {
+        var ring = ChunkRing(maxDuration: 60)
+        ring.append(chunk(at: 0))
+        ring.append(chunk(at: 4.8))
+        XCTAssertEqual(ring.chunks[1].start.timeIntervalSince(t0), 4.8, accuracy: 0.001)
+    }
+
     func testDropsByBytes() {
         var ring = ChunkRing(maxDuration: 3600, maxBytes: 3 * chunk(at: 0).byteCost)
         var dropped: [EncodedChunk] = []

@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tapeloop User Guide</title>
+<meta name="description" content="How to use Tapeloop, the macOS menu bar app that keeps the last minutes or hours of your microphone and your Mac's sound in memory so you can save them after the fact.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f5f5f4;
+    --text: #1c1c1e;
+    --muted: #5f5f63;
+    --line: rgba(0, 0, 0, 0.12);
+    --accent: #ff9f0a;
+    --accent-ink: #9a5a00;
+    --on-accent: #161616;
+    --meeting: #0a84ff;
+    --warn-bg: #fff4e0;
+    --code-bg: #f0f0ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --panel: #26262a;
+      --text: #ececee;
+      --muted: #a1a1a8;
+      --line: rgba(255, 255, 255, 0.14);
+      --accent-ink: #ffb340;
+      --warn-bg: #3a2d16;
+      --code-bg: #2c2c30;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px 64px; }
+  header { padding: 40px 0 24px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand img.icon { width: 64px; height: 64px; }
+  .brand img.wordmark { height: 40px; width: auto; }
+  .kicker { margin: 16px 0 0; color: var(--muted); font-size: 18px; }
+  .meta { margin-top: 8px; color: var(--muted); font-size: 14px; }
+  nav.toc { margin: 24px 0 8px; padding: 16px 20px; background: var(--panel); border-radius: 3px; }
+  nav.toc h2 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  nav.toc li { break-inside: avoid; }
+  h2 { margin: 48px 0 12px; font-size: 26px; line-height: 1.25; padding-top: 8px; border-top: 3px solid var(--accent); display: inline-block; }
+  h3 { margin: 28px 0 8px; font-size: 19px; }
+  p, ul, ol { margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code, kbd {
+    font: 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--code-bg);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  kbd { border: 1px solid var(--line); white-space: nowrap; }
+  pre { background: var(--code-bg); border-radius: 3px; padding: 12px 14px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  figure { margin: 20px 0 24px; }
+  figure img, figure picture img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 3px; }
+  figure.narrow img { max-width: 380px; width: 100%; }
+  figure.icons img { max-width: 420px; width: 100%; border: 0; }
+  figcaption { margin-top: 8px; color: var(--muted); font-size: 14px; }
+  .table { overflow-x: auto; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; background: var(--panel); }
+  .note { background: var(--warn-bg); border-left: 3px solid var(--accent); border-radius: 3px; padding: 12px 16px; margin: 0 0 18px; }
+  .note p:last-child { margin-bottom: 0; }
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 40px; margin-bottom: 14px; }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 1px;
+    width: 26px; height: 26px; line-height: 26px; text-align: center;
+    background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 14px;
+    border-radius: 3px;
+  }
+  .trouble dt { font-weight: 600; margin-top: 18px; }
+  .trouble dd { margin: 4px 0 0; }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (max-width: 600px) {
+    body { font-size: 15.5px; }
+    header { padding-top: 24px; }
+    .brand img.icon { width: 48px; height: 48px; }
+    .brand img.wordmark { height: 30px; }
+    nav.toc ol { columns: 1; }
+    h2 { font-size: 22px; }
+    th, td { padding: 7px 8px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <img class="icon" src="../../images/app-icon-256.png" alt="">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../images/wordmark-on-dark.svg">
+      <img class="wordmark" src="../../images/wordmark-on-light.svg" alt="Tapeloop">
+    </picture>
+  </div>
+  <p class="kicker">User guide: record the past, save what matters.</p>
+  <p class="meta">For Tapeloop 0.1.0 on macOS 14 or later.</p>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#what">What Tapeloop does</a></li>
+    <li><a href="#install">Install and first run</a></li>
+    <li><a href="#menubar">The menu bar icon and the popover</a></li>
+    <li><a href="#save">Saving</a></li>
+    <li><a href="#bookmarks">Bookmarks</a></li>
+    <li><a href="#pause">Pausing and gaps</a></li>
+    <li><a href="#meetings">Meetings and your calendar</a></li>
+    <li><a href="#library">The Library</a></li>
+    <li><a href="#transcripts">Transcripts</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#trouble">Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+<h2>What Tapeloop does</h2>
+<p>Tapeloop records your microphone and your Mac's sound all the time, like an endless tape loop. It keeps only the
+most recent part, two hours by default, and quietly drops older audio as new audio arrives. When something worth
+keeping has already happened, such as a promise in a call, a lecturer's aside or an idea you said out loud, you
+rewind and save it.</p>
+<ul>
+  <li><strong>Two sources.</strong> "You" is your microphone. "System" is everything your Mac plays, for example
+    the other side of a video call.</li>
+  <li><strong>In memory.</strong> The audio is compressed and held in your Mac's memory. At the standard quality,
+    each source uses about 20 MB per hour, so two hours of both sources need about 89 MB.</li>
+  <li><strong>Gone when you quit.</strong> Quitting Tapeloop, restarting the Mac or a crash erases what was not
+    saved. That is deliberate: nothing is kept that you did not choose to keep.</li>
+  <li><strong>Saved as ordinary files.</strong> A save is an <code>.m4a</code> audio file in your Music folder,
+    under <code>Tapeloop</code>. Any audio player can open it.</li>
+</ul>
+<div class="note"><p>Recording other people may require their consent where you live. Check the rules that apply
+to you before you record calls or meetings.</p></div>
+</section>
+
+<section id="install">
+<h2>Install and first run</h2>
+<ol class="steps">
+  <li>Download <code>Tapeloop-0.1.0.dmg</code> from the project's
+    <a href="https://github.com/harshaxnim/tapeloop/releases">Releases page</a>, open it, and drag Tapeloop to the
+    Applications folder.</li>
+  <li>Open Tapeloop. The first time, macOS blocks it because this version is not notarized by Apple. On macOS 14,
+    right-click Tapeloop in Applications, choose <strong>Open</strong>, then <strong>Open</strong> again. On
+    macOS 15 or later, try to open it once, then go to System Settings › Privacy &amp; Security and click
+    <strong>Open Anyway</strong>.</li>
+  <li>A welcome guide with five steps opens. It explains what Tapeloop does and asks for permissions from its own
+    window, so the macOS prompts appear in front of you.</li>
+</ol>
+<figure class="narrow">
+  <img src="../../images/onboarding-welcome.png" alt="The first page of the welcome guide: In memory only, Never uploaded, Your responsibility" width="390">
+  <figcaption>The first step of the welcome guide.</figcaption>
+</figure>
+<div class="table"><table>
+  <thead><tr><th>Step</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>1. Welcome</td><td>What Tapeloop keeps, and the three promises: in memory only, never uploaded, your responsibility.</td></tr>
+    <tr><td>2. Your microphone</td><td>Click <strong>Allow…</strong>; macOS asks for the Microphone permission.</td></tr>
+    <tr><td>3. Your Mac's sound</td><td>Click <strong>Allow…</strong>; macOS asks for System Audio Recording. You can skip this and record only the microphone. Screen Recording is not needed.</td></tr>
+    <tr><td>4. Optional extras</td><td>Calendar (to name recordings after your meetings), a <strong>Download</strong> button for the speech model used for transcripts, and a switch for meeting detection. Nothing is downloaded unless you click <strong>Download</strong>; when the download finishes, transcription is turned on. Allowing Calendar does not turn calendar titles on: switch them on in Settings › Meetings.</td></tr>
+    <tr><td>5. You are all set</td><td>The global shortcuts, and "Open Tapeloop when I log in" (on by default). Click <strong>Done</strong> to start recording.</td></tr>
+  </tbody>
+</table></div>
+<p>Until you finish the guide, clicking the cassette in the menu bar brings the guide back to the front. You can see
+the guide again later from Settings › General › <strong>Show Welcome Guide Again</strong>.</p>
+<p>While the guide, Settings or the Library is open, Tapeloop also shows in the Dock and in the app switcher
+(<kbd>⌘</kbd><kbd>Tab</kbd>), with its own menus at the top of the screen. When you close the last of these windows,
+it goes back to living in the menu bar only.</p>
+</section>
+
+<section id="menubar">
+<h2>The menu bar icon and the popover</h2>
+<p>Tapeloop lives in the menu bar as a small cassette. A dot in its corner tells you what it is doing.</p>
+<figure class="icons">
+  <img src="../../images/menubar-icons.png" alt="Three icons: cassette with an amber dot (recording), a grey dot (paused), and a red ring (needs permission)" width="422">
+  <figcaption>Amber dot: recording. Grey dot: paused. Red ring: a permission is missing or a source stopped.</figcaption>
+</figure>
+<p><strong>Click</strong> the icon to open the popover. <strong>Right-click</strong> (or Control-click) it for a
+menu with quick saves, Bookmark Moment, Pause or Resume Recording, Library…, Settings…, About Tapeloop and Quit
+Tapeloop.</p>
+<figure class="narrow">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../images/popover-recording-dark.png">
+    <img src="../../images/popover-recording-light.png" alt="The popover: Recording to memory, 2 h kept, 41 MB; the timeline with You and System lanes, a Zoom meeting band, bookmarks and a hatched gap; quick spans; Save 36 min" width="380">
+  </picture>
+  <figcaption>The popover. The tape runs from the oldest audio on the left to "now" on the right.</figcaption>
+</figure>
+<ul>
+  <li><strong>Top line:</strong> what Tapeloop is doing, how much it is keeping ("2 h kept") and the memory it
+    uses.</li>
+  <li><strong>Timeline:</strong> the You and System lanes show how loud each source was. Blue bands are detected
+    meetings, flags are bookmarks, and hatched stretches are gaps where nothing was recorded.</li>
+  <li><strong>Handle:</strong> the amber handle marks how far back a save reaches. The part to its right is
+    highlighted.</li>
+  <li><strong>Bottom row:</strong> Pause, Bookmark, Library and Settings.</li>
+</ul>
+</section>
+
+<section id="save">
+<h2>Saving</h2>
+<h3>From the popover</h3>
+<ol>
+  <li>Drag the amber handle to the left to go further back, or click <strong>5 min</strong>,
+    <strong>15 min</strong>, <strong>30 min</strong> or <strong>1 h</strong>. A span longer than what Tapeloop has
+    kept is greyed out.</li>
+  <li>Click <strong>Save</strong> (it shows the length, for example "Save 36 min"), or press Return.</li>
+</ol>
+<p>A long save shows a progress bar with <strong>Cancel</strong>. When it is done, a notification says "Saved" with
+two buttons: <strong>Play</strong> opens the recording in the Library and plays it, and <strong>Show in
+Finder</strong> shows the file.</p>
+<h3>From anywhere</h3>
+<ul>
+  <li>Press <kbd>⌃⌥S</kbd> (Control-Option-S) to save the last 5 minutes. You can change the length and the keys in
+    Settings › Shortcuts.</li>
+  <li>Right-click the menu bar icon and choose <strong>Save Last 5 Minutes</strong>, 15 or 30 minutes, or
+    <strong>Save Last Hour</strong>.</li>
+</ul>
+<h3>Where files go and how they are named</h3>
+<p>Recordings go to <code>Music › Tapeloop</code> in your home folder unless you choose another folder in
+Settings › General. A file is named after its start, its length and, when known, the meeting, for example
+<code>Tapeloop 2026-11-17 10.48 (36 min) Weekly sync.m4a</code>. A second file with the same name gets " 2"
+added, so nothing is overwritten.</p>
+<p>When both sources are on, Settings › General lets you choose <strong>One mixed file</strong> (easiest to share)
+or <strong>One file per source</strong>, which writes "… - Microphone.m4a" and "… - System audio.m4a" so you can
+edit the two sides separately.</p>
+<h3>Before you quit</h3>
+<p>Quitting erases what Tapeloop is keeping. If it holds more than a minute, Tapeloop asks first and offers
+<strong>Save Last … and Quit</strong> (up to the last 30 minutes), <strong>Quit</strong> or
+<strong>Cancel</strong>. Tick "Do not ask again" to stop the question, or turn it back on in Settings › General.</p>
+</section>
+
+<section id="bookmarks">
+<h2>Bookmarks</h2>
+<p>A bookmark marks a moment so you can find it later.</p>
+<ul>
+  <li>In the popover, click <strong>Bookmark</strong>. A field appears; type a label such as "idea" and press
+    Return, or leave it empty.</li>
+  <li>From any app, press <kbd>⌃⌥B</kbd>. A notification confirms the time.</li>
+  <li>From the right-click menu, choose <strong>Bookmark Moment</strong>.</li>
+</ul>
+<p>Bookmarks appear as flags on the timeline. A save keeps the bookmarks inside its span, and the Library's player
+can jump to them. Bookmarks that are older than what Tapeloop keeps disappear with the audio. You can only add a
+bookmark while Tapeloop is recording.</p>
+</section>
+
+<section id="pause">
+<h2>Pausing and gaps</h2>
+<ul>
+  <li>Click <strong>Pause</strong> in the popover, press <kbd>⌃⌥P</kbd>, or use the right-click menu. What Tapeloop
+    already keeps stays; nothing new is recorded until you resume.</li>
+  <li>Tapeloop always pauses while the Mac sleeps.</li>
+  <li>If you turn on "Pause while the screen is locked" (Settings › Recording or Privacy), it also pauses while the
+    screen is locked.</li>
+</ul>
+<p>Every pause shows as a hatched gap on the timeline. A save across a gap simply skips the time when nothing was
+recorded. If you plug in a headset or switch your sound to other headphones, recording restarts by itself, which can
+leave a very short gap.</p>
+</section>
+
+<section id="meetings">
+<h2>Meetings and your calendar</h2>
+<p>Tapeloop notices calls without any extra permission. When a known call app has used your microphone for about
+5 seconds, a meeting starts: a blue band appears on the timeline and the popover shows a banner with
+<strong>Save meeting</strong>. The meeting ends about 10 seconds after the app stops using the microphone, so a
+short mute does not split it.</p>
+<figure class="narrow">
+  <img src="../../images/popover-meeting.png" alt="The popover during a Zoom meeting, with a banner showing the start time, the calendar title Weekly sync and a Save meeting button" width="380">
+  <figcaption>During a meeting. The calendar title appears when calendar titles are on.</figcaption>
+</figure>
+<p>Recognised apps: Zoom, Microsoft Teams, FaceTime, Slack huddles, Webex, Discord, Skype, WhatsApp, Telegram,
+Signal, and calls in Chrome, Safari, Arc, Firefox, Edge and Brave (for example Google Meet). Meeting detection
+needs macOS 14.2 or later.</p>
+<p>When a meeting of at least one minute ends, Tapeloop sends a notification "The … meeting ended" with
+<strong>Save meeting</strong> and <strong>Not now</strong>. In Settings › Meetings you can instead save every
+meeting automatically, turn off the offer, hide the blue bands, or turn detection off. You can also save a meeting
+from the right-click menu (<strong>Save Current Meeting</strong> or <strong>Save Last Meeting</strong>).</p>
+<h3>Calendar titles</h3>
+<p>Turn on <strong>Use calendar event titles</strong> in Settings › Meetings and allow access to your calendars.
+Tapeloop then names a meeting, and the recording you save from it, after the calendar event that overlaps it the
+most. You can choose which calendars to use; with none picked, all are used. All-day events are never used.</p>
+</section>
+
+<section id="library">
+<h2>The Library</h2>
+<p>Open the Library from the popover, the right-click menu, or <kbd>⌘L</kbd> while a Tapeloop window is open.</p>
+<figure>
+  <img src="../../images/library.png" alt="The Library window: recordings grouped by Today, Yesterday and a date on the left; on the right a player with waveform and speed buttons, Share, Show in Finder, Export Transcript, Delete, and a transcript with You and System labels" width="840">
+  <figcaption>The Library: your recordings on the left, the selected one on the right.</figcaption>
+</figure>
+<ul>
+  <li><strong>List:</strong> recordings grouped by day (Today, Yesterday, then dates), newest first, with their
+    length and a Meeting tag when they came from one. Use <kbd>↑</kbd> and <kbd>↓</kbd> to move through them.</li>
+  <li><strong>Search:</strong> type in the search field to find recordings by name, meeting app, calendar title,
+    bookmark label or any word in a transcript. Every word you type must match; capital letters and accents do not
+    matter.</li>
+  <li><strong>Player:</strong> click the waveform to jump, press <kbd>Space</kbd> to play or pause, click the
+    bookmark button to jump to the next bookmark, and choose 1×, 1.25×, 1.5× or 2× speed.</li>
+  <li><strong>Rename:</strong> click the pencil next to the title, or press Return. The file is renamed to match.</li>
+  <li><strong>Share</strong> sends the audio file with AirDrop, Mail, Messages and more. <strong>Show in
+    Finder</strong> reveals it.</li>
+  <li><strong>Delete</strong> (or the Delete key) asks first, then moves the audio file to the Trash. Its
+    transcript and bookmarks are deleted.</li>
+</ul>
+<p>The Library shows every <code>.m4a</code> file in your save folder, including ones you put there yourself, and
+it updates when you add, remove or rename files in Finder.</p>
+</section>
+
+<section id="transcripts">
+<h2>Transcripts</h2>
+<p>Tapeloop can turn recordings into text on your Mac. The audio is never sent anywhere. You can choose between two
+speech engines in Settings › Transcripts:</p>
+<ul>
+  <li><strong>Parakeet</strong> (the default): NVIDIA's Parakeet speech model, which runs on your Mac's graphics
+    processor. It recognises English only and needs a one-time download of 731 MB.</li>
+  <li><strong>Apple speech recognition</strong>: built into macOS. It recognises many languages, needs the Speech
+    Recognition permission, and downloads nothing.</li>
+</ul>
+<figure>
+  <img src="../../images/settings-transcripts.png" alt="Settings, Transcripts tab: Transcribe recordings switch; Engine: Parakeet or Apple speech recognition; Speech model: Parakeet Unified English 0.6B (8-bit) with Download (731 MB) and Import File buttons; When: After each save, Live while recording, Only when I ask; Label speakers" width="640">
+  <figcaption>Settings › Transcripts, before the speech model is downloaded.</figcaption>
+</figure>
+
+<h3>Get the speech model</h3>
+<p>Tapeloop downloads nothing until you ask. To use Parakeet, download its speech model in either of these places:</p>
+<ul>
+  <li>In the welcome guide, step 4 (Optional extras), click <strong>Download</strong> in the Transcripts row.</li>
+  <li>In Settings › Transcripts, with Engine set to <strong>Parakeet</strong>, click <strong>Download
+    (731 MB)</strong> in the Speech model row.</li>
+</ul>
+<figure class="narrow">
+  <img src="../../images/onboarding-extras.png" alt="Welcome guide step 4, Optional extras: Calendar (Allowed), Transcripts downloading at 42 % with a cancel button, Meeting detection switch" width="390">
+  <figcaption>Downloading the speech model from the welcome guide.</figcaption>
+</figure>
+<p>While it downloads, you see how far it has got; <strong>Cancel</strong> (or the ✕ in the welcome guide) stops it.
+When the file has arrived, Tapeloop checks that it is exactly the expected file and then shows
+<strong>Installed</strong>. When a download you started finishes, Tapeloop turns transcription on with Parakeet.</p>
+<p>The model comes from Tapeloop's own page on GitHub. This download is the only time Tapeloop connects to the
+internet, and it happens only when you click <strong>Download</strong> or <strong>Try Again</strong>.</p>
+<p>If the download fails, the row says why; click <strong>Try Again</strong>. If you already have the model file,
+<code>parakeet-unified-en-0.6b-Q8_0.gguf</code> (for example copied from another Mac), click <strong>Import
+File…</strong> and choose it. A file that is not exactly the right one is refused.</p>
+
+<h3>When to transcribe</h3>
+<p>Choose under <strong>When</strong> in Settings › Transcripts:</p>
+<div class="table"><table>
+  <thead><tr><th>Choice</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td><strong>After each save</strong> (default)</td><td>Each recording is transcribed right after you save it. The speech model is loaded for the job and released afterwards, so it uses memory only while it works. On an Apple M2, an 8-second recording takes about 1 to 1.5 seconds.</td></tr>
+    <tr><td><strong>Live while recording</strong> (Parakeet only)</td><td>Tapeloop transcribes your audio as it records and keeps the text in memory beside the audio, so a save has its transcript at once. The text is forgotten when the audio it belongs to drops out of the buffer. A save that reaches back to before you chose live mode is transcribed after the save instead.</td></tr>
+    <tr><td><strong>Only when I ask</strong></td><td>Nothing is transcribed by itself. Open a recording in the Library and click <strong>Transcribe</strong>.</td></tr>
+  </tbody>
+</table></div>
+<div class="note"><p><strong>Live mode uses memory.</strong> While live mode is on, the speech model stays loaded the
+whole time Tapeloop records. That takes about 0.8 GB of memory and keeps the graphics processor busy whenever there
+is sound. On a Mac with little memory, choose <strong>After each save</strong>.</p></div>
+
+<h3>Reading and exporting transcripts</h3>
+<p>When a transcript is ready, a notification shows its word count; <strong>Open</strong> shows it in the
+Library. Each line has a time; click it to play from there. The line being played is highlighted.</p>
+<p>With <strong>Label speakers</strong> on, lines are marked <strong>You</strong> (your microphone) or
+<strong>System</strong> (your Mac's sound). This works for recordings transcribed when they are saved, whether
+after the save or live. A mixed recording transcribed later from the Library has no labels, because the two sides
+are no longer separate.</p>
+<p>To keep a transcript as a file, click <strong>Export Transcript</strong> and choose <strong>Plain Text
+(.txt)</strong>, with a time before each line, or <strong>Subtitles (.srt)</strong> for video players.</p>
+
+<h3>Using Apple speech recognition instead</h3>
+<p>Choose Apple's engine for a language other than English, or if you do not want to download the model.</p>
+<ol>
+  <li>In Settings › Transcripts, set Engine to <strong>Apple speech recognition</strong>.</li>
+  <li>Allow Speech Recognition when macOS asks, or click the button in the Permission row.</li>
+  <li>Choose a language, or keep "The system language". Only languages your Mac can recognise without a network
+    connection are listed, and Tapeloop never uses Apple's servers.</li>
+</ol>
+<p>Apple's engine offers <strong>After each save</strong> and <strong>Only when I ask</strong>, but not live mode.
+Its quality depends on Apple's speech models for your language. A word that falls exactly on a 55-second boundary
+may be misheard.</p>
+
+<h3>Deleting the speech model</h3>
+<p>In Settings › Transcripts, click <strong>Delete…</strong> in the Speech model row and confirm. This frees
+731 MB of disk space. Transcripts you already have are kept. Transcription with Parakeet stops until you download
+the model again; to keep transcribing, switch the engine to Apple speech recognition.</p>
+</section>
+
+<section id="settings">
+<h2>Settings</h2>
+<p>Open Settings from the popover's gear button, the right-click menu, or <kbd>⌘,</kbd> while a Tapeloop window is
+open. Changes take effect at once.</p>
+<figure>
+  <img src="../../images/settings-general.png" alt="Settings, General tab: Startup, Save recordings to, With both sources, File names, When quitting, Welcome guide" width="640">
+  <figcaption>Settings › General.</figcaption>
+</figure>
+<div class="table"><table>
+  <thead><tr><th>Tab</th><th>What you can set</th></tr></thead>
+  <tbody>
+    <tr><td>General</td><td>Open at login; the save folder; one mixed file or one file per source; the warning when quitting; show the welcome guide again.</td></tr>
+    <tr><td>Recording</td><td>Turn the microphone and the system audio on or off; pick a microphone (or follow the system default); live level meters; quality (32, 48, 64 or 96 kbps per source); pause while the screen is locked.</td></tr>
+    <tr><td>Memory</td><td>How much to keep (15 min to 5 h, or a custom length from 10 min to 12 h); memory used now and when full; the memory limit (100 MB to 2 GB, 500 MB by default); whether to use disk beyond the limit; <strong>Erase Buffer Now…</strong>.</td></tr>
+    <tr><td>Shortcuts</td><td>Save the last N minutes (1 to 60), bookmark, pause or resume, open the popover. Click a shortcut and press new keys, Escape to cancel, or Delete to clear it.</td></tr>
+    <tr><td>Meetings</td><td>Meeting detection; offer to save or save automatically when a meeting ends; blue bands on the timeline; calendar titles and which calendars to use.</td></tr>
+    <tr><td>Transcripts</td><td>Transcription on or off; the engine (Parakeet or Apple speech recognition); the speech model (download, import, delete); when to transcribe (after each save, live while recording, or only when you ask); the language (Apple's engine only); speaker labels.</td></tr>
+    <tr><td>Privacy</td><td>Apps whose sound is never recorded; pause while the screen is locked; what Tapeloop stores.</td></tr>
+    <tr><td>About</td><td>Version, and links to the project, issues, the MIT licence and the third-party notices (the transcription engine transcribe.cpp and the NVIDIA Parakeet model).</td></tr>
+  </tbody>
+</table></div>
+<h3>Memory and disk</h3>
+<p>If the length you choose does not fit in the memory limit, Tapeloop asks whether to keep the older part on disk
+or to keep only what fits in memory. If you allow disk, the older part is kept in a private folder that Tapeloop
+erases when it quits and when it starts again. If you do not, the buffer is shortened, and Settings › Memory says so.
+If macOS runs low on memory, Tapeloop shortens the buffer, oldest audio first, rather than slowing your Mac down.</p>
+</section>
+
+<section id="privacy">
+<h2>Privacy</h2>
+<ul>
+  <li><strong>Nothing leaves your Mac.</strong> Your audio, recordings and transcripts are never uploaded. There is
+    no account, no analytics and no update check.</li>
+  <li><strong>One download, only when you ask.</strong> Tapeloop connects to the internet for one thing: downloading
+    the speech model for transcripts, and only when you click <strong>Download</strong>. It fetches that one file
+    from Tapeloop's own page on GitHub and uses it only if it is exactly the expected file. If you never download
+    the model, Tapeloop makes no network connections. The project's automated build fails if network code is
+    added anywhere else.</li>
+  <li><strong>Memory first.</strong> Nothing is written to disk until you save, unless you allow disk use for long
+    buffers. That folder is erased on quit.</li>
+  <li><strong>Plain files.</strong> Saved recordings are ordinary audio files. Titles, bookmarks, meeting names and
+    transcripts are kept in a hidden <code>.tapeloop</code> folder inside your save folder.</li>
+  <li><strong>Leave apps out.</strong> In Settings › Privacy, add apps such as Music or Spotify under "Never record
+    audio from". Their sound is left out of the system audio.</li>
+  <li><strong>Always visible.</strong> The menu bar icon always shows when Tapeloop is recording, and macOS shows
+    its own microphone indicator.</li>
+</ul>
+<figure>
+  <img src="../../images/settings-privacy.png" alt="Settings, Privacy tab: Never record audio from (Music, Spotify), Locked screen, Recording indicator, Data" width="640">
+  <figcaption>Settings › Privacy.</figcaption>
+</figure>
+</section>
+
+<section id="trouble">
+<h2>Troubleshooting</h2>
+<dl class="trouble">
+  <dt>The icon has a red ring, or the popover says "Your microphone is not being recorded".</dt>
+  <dd>Tapeloop does not have the Microphone permission. Click <strong>Open System Settings</strong> in the popover,
+    or go to System Settings › Privacy &amp; Security › Microphone, and turn on Tapeloop. If you only want your
+    Mac's sound, click <strong>Record system audio only</strong>.</dd>
+
+  <dt>Saved files have no sound from the other side of a call.</dt>
+  <dd>Tapeloop probably does not have System Audio Recording. Go to System Settings › Privacy &amp; Security ›
+    Screen &amp; System Audio Recording, find the "System Audio Recording Only" list, and turn on Tapeloop. macOS
+    gives Tapeloop silence, not an error, when this is off, so Settings shows "Asked" rather than "Allowed" until
+    Tapeloop has heard sound from your Mac. Also check that the app is not in Settings › Privacy › "Never record
+    audio from".</dd>
+
+  <dt>"System audio is not being recorded … needs macOS 14.2 or later".</dt>
+  <dd>Your Mac runs macOS 14.0 or 14.1. Update macOS, or click <strong>Record microphone only</strong>.</dd>
+
+  <dt>A notification says "Nothing to save yet".</dt>
+  <dd>Tapeloop has no audio in the span you asked for. This happens right after it starts, after you paused, or when
+    both sources are off. Check that the icon shows the amber dot and wait a moment.</dd>
+
+  <dt>macOS asks for the permissions again after an update.</dt>
+  <dd>This version is signed in a way that makes macOS treat each update as a new app. Allow the permissions again.
+    If a switch in System Settings is already on but Tapeloop still cannot record, quit Tapeloop, turn the switch
+    off and on again, and open Tapeloop. If that does not help, ask whoever manages your Mac to reset Tapeloop's
+    permissions (the admin guide explains how), then allow them again.</dd>
+
+  <dt>A shortcut does nothing.</dt>
+  <dd>Another app probably uses the same keys. Settings › Shortcuts says "Another app already uses this shortcut";
+    choose a different one.</dd>
+
+  <dt>A call was not detected as a meeting.</dt>
+  <dd>Check that meeting detection is on in Settings › Meetings and that your Mac runs macOS 14.2 or later. The call
+    app must be one of the recognised apps and must be using your microphone for at least 5 seconds. You can always
+    save the span by hand.</dd>
+
+  <dt>A saved recording got no transcript.</dt>
+  <dd>Check Settings › Transcripts: <strong>Transcribe recordings</strong> must be on, and <strong>When</strong>
+    must not be "Only when I ask". With Parakeet, the Speech model row must say <strong>Installed</strong>; if it
+    offers <strong>Download</strong>, the model is missing. You can always open the recording in the Library and
+    click <strong>Transcribe</strong>.</dd>
+
+  <dt>The speech model download fails.</dt>
+  <dd>Check your internet connection and click <strong>Try Again</strong>. A network at work may block downloads
+    from GitHub; ask whoever manages it (the admin guide lists the addresses). If you can get the file
+    <code>parakeet-unified-en-0.6b-Q8_0.gguf</code> another way, use <strong>Import File…</strong>.</dd>
+
+  <dt>Tapeloop uses almost a gigabyte of memory.</dt>
+  <dd>That is the speech model in live mode, which stays loaded while Tapeloop records. Choose <strong>After each
+    save</strong> in Settings › Transcripts; the model is then loaded only while a transcript is made.</dd>
+
+  <dt>Transcription with Apple's engine fails or a language is missing.</dt>
+  <dd>Apple's engine only uses speech recognition that runs on your Mac. If your language has no on-device model, it
+    is not listed and Tapeloop says so. Also check System Settings › Privacy &amp; Security › Speech Recognition.</dd>
+
+  <dt>"Open Tapeloop when I log in" does not stick.</dt>
+  <dd>Move Tapeloop to the Applications folder, open it from there, and turn the option on again. You can also check
+    System Settings › General › Login Items.</dd>
+
+  <dt>Tapeloop appears in the Dock.</dt>
+  <dd>That is normal while the welcome guide, Settings or the Library is open. It leaves the Dock when you close
+    them.</dd>
+
+  <dt>I cannot find the welcome guide window.</dt>
+  <dd>Click the cassette in the menu bar. Until setup is finished, that brings the guide to the front.</dd>
+</dl>
+</section>
+
+<footer>
+  Tapeloop is free and open source under the MIT licence.
+  Source, issues and releases: <a href="https://github.com/harshaxnim/tapeloop">github.com/harshaxnim/tapeloop</a>.
+</footer>
+
+</div>
+</body>
+</html>

@@ -9,6 +9,10 @@ public struct ChunkRing: Sendable {
     public var maxDuration: TimeInterval
     /// The most bytes kept; `nil` means no byte limit.
     public var maxBytes: Int?
+    /// How far a chunk may start before the previous one ends before it counts as the clock going backwards
+    /// (encoder timing jitter is far smaller).
+    public static let backwardsTolerance: TimeInterval = 0.5
+
     /// The chunks, oldest first.
     public private(set) var chunks: [EncodedChunk] = []
     /// The total byte cost of all chunks.
@@ -30,8 +34,15 @@ public struct ChunkRing: Sendable {
     public var heldDuration: TimeInterval { chunks.reduce(0) { $0 + $1.duration } }
 
     /// Adds a chunk and drops what no longer fits. Returns the dropped chunks, oldest first.
+    ///
+    /// A chunk that starts before the newest one ends (the Mac's clock was set back) is placed right after it: the
+    /// audio did come later, and the ring must stay in order for trimming, the timeline and saving.
     @discardableResult
     public mutating func append(_ chunk: EncodedChunk) -> [EncodedChunk] {
+        var chunk = chunk
+        if let last = chunks.last, chunk.start < last.end.addingTimeInterval(-Self.backwardsTolerance) {
+            chunk.start = last.end
+        }
         chunks.append(chunk)
         bytes += chunk.byteCost
         return trim(now: chunk.end)
@@ -67,6 +78,24 @@ public struct ChunkRing: Sendable {
             next.start.timeIntervalSince(previous.end) > tolerance
                 ? TimeRange(start: previous.end, end: next.start) : nil
         }
+    }
+
+    /// Drops the oldest chunks until at most `fraction` (0 to 1) of the current bytes remain. Used when macOS
+    /// reports memory pressure. Returns the dropped chunks, oldest first.
+    @discardableResult
+    public mutating func shrink(keepingFraction fraction: Double) -> [EncodedChunk] {
+        let target = Int(Double(bytes) * min(1, max(0, fraction)))
+        var dropCount = 0
+        var dropBytes = 0
+        for chunk in chunks where bytes - dropBytes > target {
+            dropCount += 1
+            dropBytes += chunk.byteCost
+        }
+        guard dropCount > 0 else { return [] }
+        let dropped = Array(chunks.prefix(dropCount))
+        chunks.removeFirst(dropCount)
+        bytes -= dropBytes
+        return dropped
     }
 
     /// Empties the ring.

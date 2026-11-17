@@ -6,3 +6,5 @@ xcuserdata/
 DerivedData/
 .DS_Store
 .claude/do-next/
+site/.wrangler/
+node_modules/

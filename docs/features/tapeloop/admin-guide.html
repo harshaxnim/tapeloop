@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tapeloop Admin Guide</title>
+<meta name="description" content="Deploying, configuring, inspecting and removing Tapeloop on managed Macs: settings, file locations, privacy permissions, the speech model, network behaviour, login items, logs and uninstall.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f5f5f4;
+    --text: #1c1c1e;
+    --muted: #5f5f63;
+    --line: rgba(0, 0, 0, 0.12);
+    --accent: #ff9f0a;
+    --accent-ink: #9a5a00;
+    --on-accent: #161616;
+    --warn-bg: #fff4e0;
+    --code-bg: #f0f0ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --panel: #26262a;
+      --text: #ececee;
+      --muted: #a1a1a8;
+      --line: rgba(255, 255, 255, 0.14);
+      --accent-ink: #ffb340;
+      --warn-bg: #3a2d16;
+      --code-bg: #2c2c30;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 64px; }
+  header { padding: 40px 0 24px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand img.icon { width: 64px; height: 64px; }
+  .brand img.wordmark { height: 40px; width: auto; }
+  .kicker { margin: 16px 0 0; color: var(--muted); font-size: 18px; }
+  .meta { margin-top: 8px; color: var(--muted); font-size: 14px; }
+  nav.toc { margin: 24px 0 8px; padding: 16px 20px; background: var(--panel); border-radius: 3px; }
+  nav.toc h2 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  nav.toc li { break-inside: avoid; }
+  h2 { margin: 48px 0 12px; font-size: 26px; line-height: 1.25; padding-top: 8px; border-top: 3px solid var(--accent); display: inline-block; }
+  h3 { margin: 28px 0 8px; font-size: 19px; }
+  p, ul, ol { margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  code {
+    font: 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--code-bg);
+    border-radius: 3px;
+    padding: 1px 5px;
+    overflow-wrap: break-word;
+  }
+  pre { background: var(--code-bg); border-radius: 3px; padding: 12px 14px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  .table { overflow-x: auto; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; background: var(--panel); }
+  table.paths code { overflow-wrap: anywhere; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .note { background: var(--warn-bg); border-left: 3px solid var(--accent); border-radius: 3px; padding: 12px 16px; margin: 0 0 18px; }
+  .note p:last-child { margin-bottom: 0; }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (max-width: 600px) {
+    body { font-size: 15.5px; }
+    header { padding-top: 24px; }
+    .brand img.icon { width: 48px; height: 48px; }
+    .brand img.wordmark { height: 30px; }
+    nav.toc ol { columns: 1; }
+    h2 { font-size: 22px; }
+    th, td { padding: 7px 8px; font-size: 14px; }
+    code { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <img class="icon" src="../../images/app-icon-256.png" alt="">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../../images/wordmark-on-dark.svg">
+      <img class="wordmark" src="../../images/wordmark-on-light.svg" alt="Tapeloop">
+    </picture>
+  </div>
+  <p class="kicker">Admin guide: deploying, configuring, inspecting and removing Tapeloop.</p>
+  <p class="meta">For Tapeloop 0.1.0. For people who manage Macs, and for power users. End users read the
+    <a href="user-guide.html">user guide</a>; developers read the <a href="dev.md">developer guide</a>.</p>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#facts">Facts at a glance</a></li>
+    <li><a href="#install">Installing</a></li>
+    <li><a href="#permissions">Privacy permissions</a></li>
+    <li><a href="#settings">Where settings live</a></li>
+    <li><a href="#files">File locations</a></li>
+    <li><a href="#sizing">Memory and disk sizing</a></li>
+    <li><a href="#model">The speech model</a></li>
+    <li><a href="#login">Launch at login</a></li>
+    <li><a href="#logs">Logs and diagnostics</a></li>
+    <li><a href="#network">Network behaviour</a></li>
+    <li><a href="#uninstall">Uninstalling</a></li>
+  </ol>
+</nav>
+
+<section id="facts">
+<h2>Facts at a glance</h2>
+<div class="table"><table>
+  <tbody>
+    <tr><th>Bundle identifier</th><td><code>io.github.harshaxnim.tapeloop</code> (also the defaults domain and the log subsystem)</td></tr>
+    <tr><th>Version</th><td>0.1.0 (<code>CFBundleShortVersionString</code>); the build number is the CI run number</td></tr>
+    <tr><th>Minimum macOS</th><td>14.0. System audio capture and meeting detection need 14.2 or later.</td></tr>
+    <tr><th>Architectures</th><td>Universal: arm64 and x86_64</td></tr>
+    <tr><th>App type</th><td>Menu bar app (<code>LSUIElement</code>). It shows in the Dock and ⌘-Tab only while one of its windows (welcome guide, Settings, Library) is open.</td></tr>
+    <tr><th>Sandbox</th><td>Not sandboxed. Hardened runtime with the entitlements <code>com.apple.security.device.audio-input</code> and <code>com.apple.security.personal-information.calendars</code>.</td></tr>
+    <tr><th>Signing</th><td>Release builds are ad-hoc signed and not notarized, unless the project's Developer ID secrets are configured in CI. There is no Team ID.</td></tr>
+    <tr><th>Network</th><td>None, except one optional download of the speech model (731 MB) from Tapeloop's GitHub release, started by the user. See <a href="#network">Network behaviour</a>.</td></tr>
+    <tr><th>Licence</th><td>MIT. Third-party: transcribe.cpp (MIT, with ggml, miniz and Silero VAD) and the NVIDIA Parakeet model (CC-BY-4.0); see <code>THIRD_PARTY_NOTICES.md</code> in the repository.</td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section id="install">
+<h2>Installing</h2>
+<ol>
+  <li>Download <code>Tapeloop-0.1.0.dmg</code> and <code>Tapeloop-0.1.0.dmg.sha256</code> from
+    <a href="https://github.com/harshaxnim/tapeloop/releases">GitHub Releases</a> into one folder, and check the
+    DMG there:
+<pre><code>shasum -a 256 -c Tapeloop-0.1.0.dmg.sha256</code></pre>
+    It prints <code>Tapeloop-0.1.0.dmg: OK</code> when the file is intact.</li>
+  <li>Copy the app out of the DMG:
+<pre><code>hdiutil attach -nobrowse -readonly Tapeloop-0.1.0.dmg -mountpoint /Volumes/Tapeloop
+sudo ditto /Volumes/Tapeloop/Tapeloop.app /Applications/Tapeloop.app
+hdiutil detach /Volumes/Tapeloop</code></pre></li>
+  <li>Because the build is not notarized, Gatekeeper blocks the first launch of a downloaded copy. Remove the
+    quarantine attribute, or have the user choose <strong>Open</strong> (macOS 14) or <strong>Open Anyway</strong>
+    in System Settings › Privacy &amp; Security (macOS 15 and later):
+<pre><code>sudo xattr -dr com.apple.quarantine /Applications/Tapeloop.app</code></pre></li>
+  <li>Check the signature and the version:
+<pre><code>codesign --verify --deep --strict --verbose=2 /Applications/Tapeloop.app
+/Applications/Tapeloop.app/Contents/MacOS/Tapeloop --version</code></pre></li>
+</ol>
+<p>On first launch each user sees a five-step welcome guide that asks for the permissions below and offers to
+download the speech model for transcripts. Settings and the speech model are per user; nothing is installed
+system-wide besides the app bundle. The app itself does not contain the speech model; see
+<a href="#model">The speech model</a> to install it without each user downloading it.</p>
+<div class="note"><p><strong>Updates.</strong> Tapeloop has no updater. Install a new version by replacing the app
+bundle. Because each ad-hoc signed build has a different signature, macOS treats an update as a new app and the user
+must allow the permissions again. Settings, recordings and transcripts are kept.</p></div>
+</section>
+
+<section id="permissions">
+<h2>Privacy permissions</h2>
+<div class="table"><table>
+  <thead><tr><th>Permission</th><th>TCC service</th><th>System Settings › Privacy &amp; Security</th><th>Needed for</th></tr></thead>
+  <tbody>
+    <tr><td>Microphone</td><td><code>Microphone</code></td><td>Microphone</td><td>The microphone source</td></tr>
+    <tr><td>System Audio Recording</td><td><code>AudioCapture</code></td><td>Screen &amp; System Audio Recording › System Audio Recording Only</td><td>The system audio source (Core Audio process tap, macOS 14.2+)</td></tr>
+    <tr><td>Calendars, full access</td><td><code>Calendar</code></td><td>Calendars</td><td>Optional: event titles</td></tr>
+    <tr><td>Speech Recognition</td><td><code>SpeechRecognition</code></td><td>Speech Recognition</td><td>Optional: transcripts with Apple's engine only. The default engine, Parakeet, needs no permission.</td></tr>
+    <tr><td>Notifications</td><td>(not TCC)</td><td>System Settings › Notifications › Tapeloop</td><td>Optional: save confirmations, meeting prompts</td></tr>
+  </tbody>
+</table></div>
+<p>Tapeloop does not use Screen Recording, Accessibility or Input Monitoring. Its global shortcuts use Carbon hot
+keys, which need no permission. Meeting detection reads Core Audio process information, which needs no permission.</p>
+<p>macOS has no public way for an app to read the System Audio Recording decision. When it is denied, the tap
+delivers silence. Tapeloop's Settings therefore shows "Asked" after the prompt and "Allowed" only after it has heard
+sound from the system audio.</p>
+<h3>Resetting permissions</h3>
+<p>Quit Tapeloop first. Then, as the user:</p>
+<pre><code>tccutil reset Microphone io.github.harshaxnim.tapeloop
+tccutil reset AudioCapture io.github.harshaxnim.tapeloop
+tccutil reset Calendar io.github.harshaxnim.tapeloop
+tccutil reset SpeechRecognition io.github.harshaxnim.tapeloop
+# or all at once:
+tccutil reset All io.github.harshaxnim.tapeloop</code></pre>
+<p>macOS asks again the next time Tapeloop uses each one. To show the system audio prompt again from Tapeloop's
+Settings or welcome guide, also remove its own "asked" flag:
+<code>defaults delete io.github.harshaxnim.tapeloop systemAudioAsked</code>.</p>
+<h3>Configuration profiles</h3>
+<p>Apple does not let a configuration profile (PPPC payload) grant microphone access; profiles can only deny it, so
+each user must allow the microphone. A PPPC payload also needs a code requirement, and an ad-hoc signed build's
+requirement changes with every build. Pre-approving Tapeloop's permissions through MDM is therefore not practical
+until releases are signed with a Developer ID. This has not been tested with an MDM server.</p>
+</section>
+
+<section id="settings">
+<h2>Where settings live</h2>
+<p>Settings are per user, in the defaults domain <code>io.github.harshaxnim.tapeloop</code>, stored in
+<code>~/Library/Preferences/io.github.harshaxnim.tapeloop.plist</code>.</p>
+<div class="table"><table>
+  <thead><tr><th>Key</th><th>Type</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>appSettings</code></td><td>data (UTF-8 JSON)</td><td>All user settings, as one JSON document (below)</td></tr>
+    <tr><td><code>systemAudioAsked</code></td><td>boolean</td><td>The System Audio Recording prompt was shown from Tapeloop</td></tr>
+    <tr><td><code>systemAudioHeard</code></td><td>boolean</td><td>System audio has carried sound, so the permission is taken as granted</td></tr>
+    <tr><td><code>recorderSettings</code></td><td>data (JSON)</td><td>Pre-release format, read only when <code>appSettings</code> is missing</td></tr>
+    <tr><td><code>NSWindow Frame TapeloopSettings</code>, <code>NSWindow Frame TapeloopLibrary</code></td><td>string</td><td>Window positions</td></tr>
+  </tbody>
+</table></div>
+<h3>Reading the settings</h3>
+<pre><code>defaults export io.github.harshaxnim.tapeloop - \
+  | plutil -extract appSettings raw -o - - \
+  | base64 -D</code></pre>
+<p>With the default settings the JSON is (key order varies; an unset microphone device is omitted):</p>
+<pre><code>{"shortcutSaveMinutes":5,"pauseWhenLocked":false,
+ "shortcuts":{"save":{"key":"S","keyCode":1,"modifiers":6144},
+              "bookmark":{"key":"B","keyCode":11,"modifiers":6144},
+              "pause":{"modifiers":6144,"key":"P","keyCode":35}},
+ "meetings":{"showOnTimeline":true,"offerToSave":true,"autoSave":false,
+             "useCalendar":false,"calendarIDs":[],"detect":true},
+ "onboardingDone":false,
+ "transcription":{"enabled":false,"engine":"parakeet","mode":"afterSave","labelSpeakers":true},
+ "excludedBundleIDs":[],
+ "recorder":{"bufferDuration":7200,"ramLimitBytes":500000000,"mixSources":true,
+             "allowDisk":false,"sources":["microphone","system"],"bitRate":48000},
+ "warnOnQuit":true}</code></pre>
+<div class="table"><table>
+  <thead><tr><th>Field</th><th>Meaning and values</th></tr></thead>
+  <tbody>
+    <tr><td><code>recorder.sources</code></td><td><code>"microphone"</code>, <code>"system"</code></td></tr>
+    <tr><td><code>recorder.bitRate</code></td><td>Bits per second per source: 32000, 48000 (default), 64000, 96000</td></tr>
+    <tr><td><code>recorder.bufferDuration</code></td><td>Seconds kept; default 7200 (2 h)</td></tr>
+    <tr><td><code>recorder.ramLimitBytes</code></td><td>Memory limit in bytes; the UI offers 100 MB to 2 GB; default 500000000</td></tr>
+    <tr><td><code>recorder.allowDisk</code></td><td>Keep the part beyond the limit on disk</td></tr>
+    <tr><td><code>recorder.saveFolderPath</code></td><td>Absolute path; absent means <code>~/Music/Tapeloop</code></td></tr>
+    <tr><td><code>recorder.mixSources</code></td><td><code>true</code> one mixed file, <code>false</code> one file per source</td></tr>
+    <tr><td><code>inputDeviceUID</code></td><td>Core Audio device UID of the chosen microphone; absent follows the system default</td></tr>
+    <tr><td><code>excludedBundleIDs</code></td><td>Apps whose sound is never recorded</td></tr>
+    <tr><td><code>shortcuts.*</code></td><td>Carbon key code and modifiers (control 4096 + option 2048 = 6144); a missing entry means no shortcut. Also <code>openPopover</code>.</td></tr>
+    <tr><td><code>shortcutSaveMinutes</code></td><td>Minutes the save shortcut saves</td></tr>
+    <tr><td><code>warnOnQuit</code>, <code>pauseWhenLocked</code>, <code>onboardingDone</code></td><td>Booleans</td></tr>
+    <tr><td><code>meetings.*</code></td><td>Detection, offer to save, auto-save, timeline bands, calendar titles, calendar identifiers (empty means all)</td></tr>
+    <tr><td><code>transcription.enabled</code></td><td>Transcribe recordings; default <code>false</code></td></tr>
+    <tr><td><code>transcription.engine</code></td><td><code>"parakeet"</code> (default) or <code>"apple"</code>. If <code>enabled</code> is present and <code>engine</code> is missing, the Apple engine is used, because that is how settings from before Parakeet are read.</td></tr>
+    <tr><td><code>transcription.mode</code></td><td><code>"afterSave"</code> (default), <code>"live"</code> (Parakeet only; the model stays loaded, about 0.8 GB) or <code>"manual"</code> (only from the Library). An older <code>"automatic": false</code> is read as <code>"manual"</code>.</td></tr>
+    <tr><td><code>transcription.localeID</code>, <code>transcription.labelSpeakers</code></td><td>Recognition language for Apple's engine (absent means the system language); You and System labels</td></tr>
+  </tbody>
+</table></div>
+<h3>Presetting settings</h3>
+<p>There are no individual managed-preference keys. To give a user a starting configuration, quit Tapeloop, write
+the whole JSON document as data, and start Tapeloop again. Any field you leave out takes its default. Tapeloop
+rewrites the key whenever the user changes a setting, so this is a starting point, not an enforced policy. This
+method has not been tested on managed Macs.</p>
+<pre><code>defaults write io.github.harshaxnim.tapeloop appSettings -data \
+  "$(printf '%s' '{"onboardingDone":false,"recorder":{"bufferDuration":3600}}' | xxd -p | tr -d '\n')"</code></pre>
+<p>To reset Tapeloop to its defaults (the welcome guide appears again): quit it, then
+<code>defaults delete io.github.harshaxnim.tapeloop</code>.</p>
+</section>
+
+<section id="files">
+<h2>File locations</h2>
+<div class="table"><table class="paths">
+  <thead><tr><th>What</th><th>Where</th><th>Lifetime</th></tr></thead>
+  <tbody>
+    <tr><td>The app</td><td><code>/Applications/Tapeloop.app</code></td><td>Until removed</td></tr>
+    <tr><td>Saved recordings</td><td><code>~/Music/Tapeloop/*.m4a</code>, or the folder chosen in Settings › General</td><td>Until the user deletes them</td></tr>
+    <tr><td>Recording metadata (title, meeting, bookmarks, transcript)</td><td><code>&lt;save folder&gt;/.tapeloop/&lt;audio file name&gt;.json</code></td><td>Removed when the recording is deleted from the Library</td></tr>
+    <tr><td>Files being written</td><td><code>&lt;save folder&gt;/.tapeloop-&lt;UUID&gt;.m4a</code> (hidden)</td><td>Renamed when complete; deleted on failure</td></tr>
+    <tr><td>Disk part of the buffer (only if allowed)</td><td><code>~/Library/Caches/io.github.harshaxnim.tapeloop/spill/microphone/</code> and <code>…/spill/system/</code>, one <code>.chunk</code> file per ~5 s</td><td>Deleted on quit and on launch</td></tr>
+    <tr><td>Temporary per-source files for transcript speaker labels</td><td><code>$TMPDIR/tapeloop-transcribe-&lt;UUID&gt;/</code></td><td>Deleted after transcription</td></tr>
+    <tr><td>Speech model (only if downloaded or installed)</td><td><code>~/Library/Application Support/Tapeloop/Models/parakeet-unified-en-0.6b-Q8_0.gguf</code> (731 MB)</td><td>Until the user deletes it in Settings › Transcripts</td></tr>
+    <tr><td>Model files being downloaded or imported</td><td><code>~/Library/Application Support/Tapeloop/Models/.parakeet-unified-en-0.6b-Q8_0.gguf.download</code> or <code>….import</code> (hidden)</td><td>Moved into place after the checks; deleted when they fail</td></tr>
+    <tr><td>Settings</td><td><code>~/Library/Preferences/io.github.harshaxnim.tapeloop.plist</code></td><td>Until deleted</td></tr>
+  </tbody>
+</table></div>
+<p>The rolling buffer itself is in memory and is never written anywhere unless disk use is allowed. A crash or a
+forced quit cannot delete the disk part; Tapeloop deletes it the next time it starts.</p>
+<p>The sidecar JSON is pretty-printed with sorted keys and ISO-8601 UTC dates. Its fields are <code>version</code>,
+<code>title</code>, <code>start</code>, <code>duration</code>, <code>sources</code>, <code>mixed</code>,
+<code>meeting</code>, <code>bookmarks</code> and <code>transcript</code>; the
+<a href="../../ARCHITECTURE.md#5-sidecar-metadata">architecture document</a> has a full example.</p>
+</section>
+
+<section id="sizing">
+<h2>Memory and disk sizing</h2>
+<p>Tapeloop plans memory as bit rate ÷ 8 × seconds × 1.03. The measured figure at 48 kbps is 20.0 MB per hour per
+source, a little below the plan.</p>
+<div class="table"><table>
+  <thead><tr><th>Quality</th><th class="num">Per source, per hour</th><th class="num">2 h, both sources</th><th class="num">Fits in 500 MB (both)</th></tr></thead>
+  <tbody>
+    <tr><td>32 kbps</td><td class="num">14.8 MB</td><td class="num">59 MB</td><td class="num">16.9 h</td></tr>
+    <tr><td>48 kbps (default)</td><td class="num">22.2 MB</td><td class="num">89 MB</td><td class="num">11.2 h</td></tr>
+    <tr><td>64 kbps</td><td class="num">29.7 MB</td><td class="num">119 MB</td><td class="num">8.4 h</td></tr>
+    <tr><td>96 kbps</td><td class="num">44.5 MB</td><td class="num">178 MB</td><td class="num">5.6 h</td></tr>
+  </tbody>
+</table></div>
+<p>The longest buffer a user can choose is 12 hours. Disk use is off by default; when a chosen length does not fit,
+Tapeloop asks the user. Under macOS memory pressure Tapeloop reduces the in-memory part to 50 % (warning) or 25 %
+(critical), oldest audio first.</p>
+<p>Saved files: single-source and per-source saves keep the buffer's bit rate (no re-encoding); a mixed save is
+re-encoded once at 64 kbps mono, about 29 MB per hour.</p>
+<p>Transcription with Parakeet adds 731 MB of disk space per user for the model, and about 0.8 GB of memory while
+the model is loaded: during each transcript in "after each save" mode, and the whole time Tapeloop records in live
+mode. Measured on an Apple M2: the model loads in about 0.2 s, and an 8-second recording is transcribed in about 1
+to 1.5 s including the load.</p>
+</section>
+
+<section id="model">
+<h2>The speech model</h2>
+<p>Parakeet transcription needs one model file. Tapeloop does not ship it in the app and never downloads it by
+itself.</p>
+<div class="table"><table class="paths">
+  <tbody>
+    <tr><th>Model</th><td>NVIDIA Parakeet Unified English 0.6B, 8-bit (Q8_0) GGUF for transcribe.cpp; licence CC-BY-4.0</td></tr>
+    <tr><th>File name</th><td><code>parakeet-unified-en-0.6b-Q8_0.gguf</code></td></tr>
+    <tr><th>Size</th><td>731 357 568 bytes (731 MB)</td></tr>
+    <tr><th>SHA-256</th><td><code>4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795</code></td></tr>
+    <tr><th>Source</th><td><code>https://github.com/harshaxnim/tapeloop/releases/download/models-v1/parakeet-unified-en-0.6b-Q8_0.gguf</code></td></tr>
+    <tr><th>Installed at</th><td><code>~/Library/Application Support/Tapeloop/Models/</code> in each user's home folder</td></tr>
+  </tbody>
+</table></div>
+<p>Users get the file in one of three ways: <strong>Download</strong> in the welcome guide or in Settings ›
+Transcripts; <strong>Import File…</strong> in Settings › Transcripts; or a copy that you put in place. A download
+or an import is installed only if both the size and the SHA-256 match.</p>
+<h3>Pre-installing the model</h3>
+<p>Tapeloop treats the model as installed when the file is in the Models folder with exactly the expected size. It
+does not check the hash of a file you copy there, so check it yourself before you distribute it:</p>
+<pre><code>shasum -a 256 parakeet-unified-en-0.6b-Q8_0.gguf
+# must print 4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795</code></pre>
+<p>Then, for each user, with Tapeloop not running:</p>
+<pre><code>mkdir -p ~/Library/Application\ Support/Tapeloop/Models
+cp parakeet-unified-en-0.6b-Q8_0.gguf ~/Library/Application\ Support/Tapeloop/Models/</code></pre>
+<ul>
+  <li>Copy the real file. A symbolic link is not accepted, because Tapeloop checks the size of the item itself.</li>
+  <li>The file must be readable by the user. If you copy it as root, set its owner to the user.</li>
+  <li>Tapeloop reads the model state when it starts, so copy the file before Tapeloop runs, or quit and reopen it
+    afterwards.</li>
+  <li>A pre-installed model does not turn transcription on. The user turns on <strong>Transcribe
+    recordings</strong> in Settings › Transcripts, or you preset it (below). Only a download or an import that the
+    user starts turns transcription on by itself.</li>
+</ul>
+<p>To preset transcription with Parakeet after each save, include the <code>transcription</code> object with an
+explicit <code>engine</code> in the settings document (see <a href="#settings">Presetting settings</a>):</p>
+<pre><code>defaults write io.github.harshaxnim.tapeloop appSettings -data \
+  "$(printf '%s' '{"transcription":{"enabled":true,"engine":"parakeet","mode":"afterSave","labelSpeakers":true}}' | xxd -p | tr -d '\n')"</code></pre>
+<h3>Offline Macs</h3>
+<p>On a Mac without internet access, pre-install the model as above (or let the user import the file with
+<strong>Import File…</strong>). Tapeloop then needs no network at all. Without the model, transcription works only
+with Apple's engine, for languages that macOS can recognise on the device.</p>
+<h3>Removing the model</h3>
+<p>The user clicks <strong>Delete…</strong> in Settings › Transcripts, or you delete the file with Tapeloop not
+running. Existing transcripts are kept. Parakeet transcription stops until the model is installed again.</p>
+</section>
+
+<section id="login">
+<h2>Launch at login</h2>
+<p>Tapeloop registers itself as a login item with <code>SMAppService.mainApp</code>. The welcome guide's
+"Open Tapeloop when I log in" box is ticked by default; users change it later in Settings › General. The item
+appears in System Settings › General › Login Items, where it can also be turned off. To list background and login
+items from Terminal:</p>
+<pre><code>sudo sfltool dumpbtm | grep -i -A6 tapeloop</code></pre>
+<p>Registration can fail when the app runs from an unusual location; Tapeloop then asks the user to move it to the
+Applications folder.</p>
+</section>
+
+<section id="logs">
+<h2>Logs and diagnostics</h2>
+<p>Tapeloop writes to the unified log with subsystem <code>io.github.harshaxnim.tapeloop</code>. It writes no log
+files of its own.</p>
+<pre><code># the last hour
+/usr/bin/log show --info --last 1h --predicate 'subsystem == "io.github.harshaxnim.tapeloop"'
+# live
+/usr/bin/log stream --info --predicate 'subsystem == "io.github.harshaxnim.tapeloop"'
+# one area, for example capture problems
+/usr/bin/log show --info --last 1h --predicate 'subsystem == "io.github.harshaxnim.tapeloop" AND category == "system-audio"'</code></pre>
+<div class="table"><table>
+  <thead><tr><th>Category</th><th>What it reports</th></tr></thead>
+  <tbody>
+    <tr><td><code>app</code></td><td>Start, sleep and lock suspension, saves, save failures</td></tr>
+    <tr><td><code>engine</code></td><td>Sources starting, failing and restarting; memory pressure</td></tr>
+    <tr><td><code>mic</code>, <code>system-audio</code>, <code>encoder</code></td><td>Device formats, device changes, encoding errors</td></tr>
+    <tr><td><code>meetings</code>, <code>calendar</code>, <code>intelligence</code>, <code>transcription</code></td><td>Meetings starting and ending, calendar access, transcription runs and failures</td></tr>
+    <tr><td><code>models</code>, <code>parakeet</code>, <code>live-transcription</code></td><td>Speech model downloads (with the URL), imports, installs and failures; the model loading and unloading; live transcription errors</td></tr>
+    <tr><td><code>hotkeys</code>, <code>services</code>, <code>library</code>, <code>library-player</code>, <code>probe</code></td><td>Shortcuts already taken, permission probes and login items, Library and playback errors, the capture self-test</td></tr>
+  </tbody>
+</table></div>
+<p><strong>Capture self-test.</strong> <code>open -W -n /Applications/Tapeloop.app --args --probe --seconds 10 --out
+/tmp/tapeloop-probe</code> records 10 seconds of both sources through the installed app, writes
+<code>probe-microphone.m4a</code>, <code>probe-system.m4a</code> and <code>report.txt</code>, and ends the report with
+<code>RESULT: OK</code> when both sources worked. Quit the running Tapeloop first.</p>
+</section>
+
+<section id="network">
+<h2>Network behaviour</h2>
+<p>Tapeloop has no telemetry, no crash reporting, no update checks and no cloud features. Audio, recordings and
+transcripts never leave the Mac. It makes exactly one kind of network request: downloading the speech model, and
+only when the user clicks <strong>Download</strong> (welcome guide or Settings › Transcripts) or <strong>Try
+Again</strong> after a failed download.</p>
+<div class="table"><table class="paths">
+  <tbody>
+    <tr><th>URL</th><td><code>https://github.com/harshaxnim/tapeloop/releases/download/models-v1/parakeet-unified-en-0.6b-Q8_0.gguf</code></td></tr>
+    <tr><th>Hosts to allow</th><td><code>github.com</code>, which redirects to GitHub's release download hosts (at the time of writing <code>release-assets.githubusercontent.com</code> or <code>objects.githubusercontent.com</code>). HTTPS, port 443.</td></tr>
+    <tr><th>Method</th><td>One HTTPS GET of a 731 MB file. No cookies or cache (an ephemeral session); macOS's system proxy settings apply. A request times out after 60 s without data; the whole download may take up to 6 hours.</td></tr>
+    <tr><th>Checks</th><td>Any answer other than HTTP 200 is rejected. The file is installed only if its size and SHA-256 match the values built into the app.</td></tr>
+  </tbody>
+</table></div>
+<p>All network code is in one source file, <code>Sources/TapeloopParakeet/ModelDownloader.swift</code>. The
+project's CI fails any build in which <code>URLSession</code>, <code>NWConnection</code>, <code>URLRequest</code>,
+<code>CFSocket</code> or <code>NSStream</code> appears in any other source file. Apple's speech engine requires
+on-device recognition and never falls back to Apple's servers. The other web addresses in the app are links in
+Settings › About, which open in the user's browser when clicked.</p>
+<p>There is no setting that hides the <strong>Download</strong> button. To keep Macs from downloading the model,
+block the URL above at your proxy or firewall (blocking all of GitHub's release download hosts also affects other
+software), or pre-install the model so the button is not shown. To confirm what the running app has open:</p>
+<pre><code>lsof -nP -i -a -p "$(pgrep -x Tapeloop)"</code></pre>
+<p>An empty result means no network connections. While a model download runs, it shows HTTPS connections to GitHub.</p>
+</section>
+
+<section id="uninstall">
+<h2>Uninstalling</h2>
+<ol>
+  <li>In Tapeloop, turn off Settings › General › "Open Tapeloop when I log in" (or remove it in System Settings ›
+    General › Login Items).</li>
+  <li>Quit Tapeloop from its menu. Quitting erases the buffer and the disk part.</li>
+  <li>Remove the app, its settings, its cache folder and its permissions:
+<pre><code>rm -rf /Applications/Tapeloop.app
+defaults delete io.github.harshaxnim.tapeloop
+rm -rf ~/Library/Caches/io.github.harshaxnim.tapeloop
+rm -rf ~/Library/Application\ Support/Tapeloop   # the speech model, 731 MB
+tccutil reset All io.github.harshaxnim.tapeloop</code></pre></li>
+  <li>Recordings are the user's files and are not removed. Delete <code>~/Music/Tapeloop</code> (or the chosen
+    folder), including its hidden <code>.tapeloop</code> folder, only if the user wants them gone.</li>
+</ol>
+</section>
+
+<footer>
+  Tapeloop is free and open source under the MIT licence.
+  Source, issues and releases: <a href="https://github.com/harshaxnim/tapeloop">github.com/harshaxnim/tapeloop</a>.
+  Report security issues privately as described in the project's <code>SECURITY.md</code>.
+</footer>
+
+</div>
+</body>
+</html>

@@ -2,28 +2,68 @@
     @preconcurrency import AVFoundation
     import CoreAudio
     import Foundation
+    import TapeloopCore
 
     /// Captures everything the Mac plays through a Core Audio process tap (macOS 14.2 and later).
     ///
     /// It creates a global stereo tap, wraps it in a private aggregate device and reads it with an IO block. It needs
     /// only the "System Audio Recording" permission (`NSAudioCaptureUsageDescription`); macOS asks the first time the
-    /// device starts. When the permission is denied, the tap delivers silence rather than an error.
+    /// device starts. When the permission is denied, the tap delivers silence rather than an error. When the default
+    /// output device changes (headphones, AirPods), the tap and its aggregate device are rebuilt.
     @available(macOS 14.2, *)
-    public final class SystemAudioTap: @unchecked Sendable {
+    public final class SystemAudioTap: AudioSource, @unchecked Sendable {
+        public let kind = SourceKind.system
+        private let lock = NSLock()
         private var tapID = AudioObjectID(kAudioObjectUnknown)
         private var aggregateID = AudioObjectID(kAudioObjectUnknown)
         private var procID: AudioDeviceIOProcID?
-        private let queue = DispatchQueue(label: "io.github.harshaxnim.tapeloop.system-audio", qos: .userInitiated)
+        /// Runs the IO block. `.workItem` drains an autorelease pool after every callback: without it, the
+        /// Objective-C objects each callback creates (about 94 a second) are never freed.
+        private let queue = DispatchQueue(
+            label: "io.github.harshaxnim.tapeloop.system-audio", qos: .userInitiated, autoreleaseFrequency: .workItem)
+        private let listenerQueue = DispatchQueue(
+            label: "io.github.harshaxnim.tapeloop.system-audio.devices", autoreleaseFrequency: .workItem)
+        private var listener: AudioObjectPropertyListenerBlock?
+        private var onBuffer: AudioBufferHandler?
+        private var onEvent: (@Sendable (SourceEvent) -> Void)?
+        private var excluded: [String]
 
         /// The PCM format the tap delivers, known after `start`.
         public private(set) var format: AVAudioFormat?
 
-        /// Creates the source; nothing runs until `start`.
-        public init() {}
+        /// Creates the source. `excludingBundleIDs` lists apps whose sound is left out (for example, a music player
+        /// the user does not want in recordings); their helper processes are left out too.
+        public init(excludingBundleIDs: [String] = []) {
+            excluded = excludingBundleIDs
+        }
 
-        /// Starts capture. `onBuffer` runs on a private queue; the buffer is only valid during the call.
-        public func start(onBuffer: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
-            let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        public func start(
+            onBuffer: @escaping AudioBufferHandler, onEvent: @escaping @Sendable (SourceEvent) -> Void
+        ) throws {
+            lock.lock()
+            defer { lock.unlock() }
+            self.onBuffer = onBuffer
+            self.onEvent = onEvent
+            try startTap()
+            watchDefaultOutput()
+        }
+
+        public func stop() {
+            lock.lock()
+            defer { lock.unlock() }
+            unwatchDefaultOutput()
+            stopTap()
+            onBuffer = nil
+            onEvent = nil
+        }
+
+        deinit { stopTap() }
+
+        /// Call with the lock held.
+        private func startTap() throws {
+            guard let onBuffer else { return }
+            let objects = AudioDevices.processObjects(matching: excluded)
+            let description = CATapDescription(stereoGlobalTapButExcludeProcesses: objects)
             description.name = "Tapeloop"
             description.muteBehavior = .unmuted
             var tap = AudioObjectID(kAudioObjectUnknown)
@@ -63,18 +103,23 @@
             aggregateID = aggregateDevice
 
             try AudioError.check(
-                AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateDevice, queue) { _, inputData, _, _, _ in
-                    guard
-                        let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: inputData, deallocator: nil)
-                    else { return }
-                    onBuffer(buffer)
+                AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateDevice, queue) { _, inputData, inputTime, _, _ in
+                    autoreleasepool {
+                        guard
+                            let buffer = AVAudioPCMBuffer(
+                                pcmFormat: format, bufferListNoCopy: inputData, deallocator: nil)
+                        else { return }
+                        let valid = inputTime.pointee.mFlags.contains(.hostTimeValid)
+                        onBuffer(buffer, HostClock.date(forHostTime: valid ? inputTime.pointee.mHostTime : 0))
+                    }
                 }, "AudioDeviceCreateIOProcIDWithBlock")
+            IOBufferSize.preferLarge(aggregateDevice)
             try AudioError.check(AudioDeviceStart(aggregateDevice, procID), "AudioDeviceStart")
             Log.tap.info("System audio tap started")
         }
 
-        /// Stops capture and destroys the tap and the aggregate device.
-        public func stop() {
+        /// Call with the lock held (or from deinit).
+        private func stopTap() {
             if aggregateID != kAudioObjectUnknown {
                 if let procID {
                     AudioDeviceStop(aggregateID, procID)
@@ -88,12 +133,63 @@
             tapID = AudioObjectID(kAudioObjectUnknown)
         }
 
-        deinit { stop() }
-
-        static func defaultOutputDeviceUID() throws -> String {
-            var address = AudioObjectPropertyAddress(
+        private static var defaultOutputAddress: AudioObjectPropertyAddress {
+            AudioObjectPropertyAddress(
                 mSelector: kAudioHardwarePropertyDefaultSystemOutputDevice, mScope: kAudioObjectPropertyScopeGlobal,
                 mElement: kAudioObjectPropertyElementMain)
+        }
+
+        private func watchDefaultOutput() {
+            let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in self?.restartAfterOutputChange() }
+            var address = Self.defaultOutputAddress
+            if AudioObjectAddPropertyListenerBlock(
+                AudioObjectID(kAudioObjectSystemObject), &address, listenerQueue, block)
+                == noErr
+            {
+                listener = block
+            }
+        }
+
+        private func unwatchDefaultOutput() {
+            guard let listener else { return }
+            var address = Self.defaultOutputAddress
+            AudioObjectRemovePropertyListenerBlock(
+                AudioObjectID(kAudioObjectSystemObject), &address, listenerQueue, listener)
+            self.listener = nil
+        }
+
+        private func restartAfterOutputChange() {
+            lock.lock()
+            defer { lock.unlock() }
+            guard onBuffer != nil else { return }
+            Log.tap.info("Default output changed; rebuilding the system audio tap")
+            stopTap()
+            do {
+                try startTap()
+                onEvent?(.restarted("The sound output changed, so system audio recording restarted."))
+            } catch {
+                Log.tap.error("System audio restart failed: \(String(describing: error), privacy: .public)")
+                onEvent?(.failed("System audio could not be recorded after the sound output changed."))
+            }
+        }
+
+        /// Changes the excluded apps, or re-reads which processes they run (after an app launches); takes effect at
+        /// once when running.
+        public func setExcludedBundleIDs(_ bundleIDs: [String]) {
+            lock.lock()
+            defer { lock.unlock() }
+            excluded = bundleIDs
+            guard onBuffer != nil else { return }
+            stopTap()
+            do {
+                try startTap()
+            } catch {
+                onEvent?(.failed("System audio could not be recorded with the new exclusions."))
+            }
+        }
+
+        static func defaultOutputDeviceUID() throws -> String {
+            var address = defaultOutputAddress
             var device = AudioObjectID(kAudioObjectUnknown)
             var size = UInt32(MemoryLayout<AudioObjectID>.size)
             try AudioError.check(
