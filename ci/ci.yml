@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-linux:
+    name: Core tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test RearviewCore
+        run: swift test --filter RearviewCoreTests
+
+  macos:
+    name: Build, test, app, DMG (macOS)
+    runs-on: macos-15
+    env:
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Toolchain
+        run: |
+          sw_vers
+          swift --version
+      - name: Lint
+        run: make lint
+      - name: No network code
+        run: |
+          if grep -rnE 'URLSession|NWConnection|URLRequest' Sources; then
+            echo "Rearview must not make network calls"; exit 1
+          fi
+      - name: Build (warnings are errors)
+        run: swift build -Xswiftc -warnings-as-errors
+      - name: Test
+        run: swift test
+      - name: UI snapshots
+        run: swift run RearviewSnapshots build/snapshots
+      - name: App bundle
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
+          BUILD_NUMBER="$GITHUB_RUN_NUMBER" make app
+      - name: DMG
+        run: scripts/make-dmg.sh
+      - name: Verify DMG
+        run: scripts/verify-dmg.sh "$(cat build/dmg-path.txt)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rearview-dmg
+          path: |
+            build/Rearview-*.dmg
+            build/Rearview-*.dmg.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-snapshots
+          path: build/snapshots/*.png
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [core-linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Rearview-dmg
+          path: dist
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "Rearview ${GITHUB_REF_NAME}" --generate-notes

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Rearview</string>
+	<key>CFBundleExecutable</key>
+	<string>Rearview</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.harshaxnim.rearview</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Rearview</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__VERSION__</string>
+	<key>CFBundleVersion</key>
+	<string>__BUILD__</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Harsha. MIT License.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Rearview records your microphone into a private buffer on this Mac, so you can save a conversation after it happened.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Rearview records your screen and system sound into a private buffer on this Mac, so you can save what just happened.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Rearview reads event titles to name your recordings and to offer saving a meeting that just ended. Nothing leaves this Mac.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Rearview transcribes saved recordings on this Mac, so you can read and search them.</string>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+</dict>
+</plist>
