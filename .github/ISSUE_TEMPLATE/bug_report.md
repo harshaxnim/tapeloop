@@ -10,4 +10,4 @@ labels: bug
 
 **Steps to reproduce**
 
-**Environment**: macOS version, Mac model (Apple silicon / Intel), Rearview version (About tab).
+**Environment**: macOS version, Mac model (Apple silicon / Intel), Tapeloop version (About tab).

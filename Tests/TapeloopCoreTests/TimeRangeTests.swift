@@ -1,5 +1,5 @@
 import Foundation
-import RearviewCore
+import TapeloopCore
 import XCTest
 
 final class TimeRangeTests: XCTestCase {
@@ -32,6 +32,7 @@ final class TimeRangeTests: XCTestCase {
     }
 
     func testIdentity() {
-        XCTAssertEqual(RearviewInfo.bundleIdentifier, "io.github.harshaxnim.rearview")
+        XCTAssertEqual(TapeloopInfo.bundleIdentifier, "io.github.harshaxnim.tapeloop")
+        XCTAssertEqual(TapeloopInfo.name, "Tapeloop")
     }
 }

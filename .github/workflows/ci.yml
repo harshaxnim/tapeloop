@@ -21,11 +21,11 @@ jobs:
     container: swift:6.0
     steps:
       - uses: actions/checkout@v4
-      - name: Test RearviewCore
-        run: swift test --filter RearviewCoreTests
+      - name: Test TapeloopCore
+        run: swift test --filter TapeloopCoreTests
 
   macos:
-    name: Build, test, app, DMG (macOS)
+    name: Build, test, app, DMG (macOS, Xcode 16.2)
     runs-on: macos-15
     env:
       MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
@@ -37,37 +37,44 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Toolchain
+      - name: Select Xcode 16.2 (the version contributors build with)
         run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app
           sw_vers
+          xcodebuild -version
           swift --version
+      - name: Format check
+        run: |
+          swift format --in-place --recursive Package.swift Sources Tests
+          git diff --exit-code || { echo "Run 'make format' and commit the result"; exit 1; }
       - name: Lint
         run: make lint
       - name: No network code
         run: |
           if grep -rnE 'URLSession|NWConnection|URLRequest' Sources; then
-            echo "Rearview must not make network calls"; exit 1
+            echo "Tapeloop must not make network calls"; exit 1
           fi
       - name: Build (warnings are errors)
         run: swift build -Xswiftc -warnings-as-errors
       - name: Test
         run: swift test
       - name: UI snapshots
-        run: swift run RearviewSnapshots build/snapshots
-      - name: App bundle
+        run: swift run TapeloopSnapshots build/snapshots
+      - name: App bundle (universal)
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
-          BUILD_NUMBER="$GITHUB_RUN_NUMBER" make app
+          BUILD_NUMBER="$GITHUB_RUN_NUMBER" UNIVERSAL=1 scripts/make-app.sh
+          cp build/AppIcon-1024.png build/snapshots/app-icon.png
       - name: DMG
         run: scripts/make-dmg.sh
       - name: Verify DMG
         run: scripts/verify-dmg.sh "$(cat build/dmg-path.txt)"
       - uses: actions/upload-artifact@v4
         with:
-          name: Rearview-dmg
+          name: Tapeloop-dmg
           path: |
-            build/Rearview-*.dmg
-            build/Rearview-*.dmg.sha256
+            build/Tapeloop-*.dmg
+            build/Tapeloop-*.dmg.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: ui-snapshots
@@ -83,11 +90,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Rearview-dmg
+          name: Tapeloop-dmg
           path: dist
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          PRE=""
+          [[ "$GITHUB_REF_NAME" == *-* ]] && PRE="--prerelease"
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
-            --title "Rearview ${GITHUB_REF_NAME}" --generate-notes
+            --title "Tapeloop ${GITHUB_REF_NAME}" --generate-notes $PRE

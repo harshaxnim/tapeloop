@@ -5,10 +5,10 @@ This file grows into the full guide as the modules are built.
 
 | Module | Role | Platforms |
 |---|---|---|
-| `RearviewCore` | Models and logic: time ranges, segment index, retention, save planning, naming, settings | macOS, Linux |
-| `RearviewCapture` | Screen, microphone and system audio capture; segment writer | macOS |
-| `RearviewExport` | Stitches segments into one file | macOS |
-| `RearviewIntelligence` | Transcription, meeting detection, calendar, login item | macOS |
-| `RearviewUI` | SwiftUI views and view models | macOS |
-| `Rearview` | The app: status item, windows, hotkeys, wiring | macOS |
-| `RearviewSnapshots` | Renders the UI to PNG for CI | macOS |
+| `TapeloopCore` | Models and logic: time ranges, segment index, retention, save planning, naming, settings | macOS, Linux |
+| `TapeloopCapture` | Screen, microphone and system audio capture; segment writer | macOS |
+| `TapeloopExport` | Stitches segments into one file | macOS |
+| `TapeloopIntelligence` | Transcription, meeting detection, calendar, login item | macOS |
+| `TapeloopUI` | SwiftUI views and view models | macOS |
+| `Tapeloop` | The app: status item, windows, hotkeys, wiring | macOS |
+| `TapeloopSnapshots` | Renders the UI to PNG for CI | macOS |

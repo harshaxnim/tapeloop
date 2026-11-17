@@ -1,16 +1,16 @@
-# Contributing to Rearview
+# Contributing to Tapeloop
 
-Thank you for helping. Rearview is a SwiftPM project with no Xcode project file.
+Thank you for helping. Tapeloop is a SwiftPM project with no Xcode project file.
 
 ## Set up
 - macOS 14+ with Xcode 16 (Swift 6). `make build`, `make test`, `make lint`, `make app`, `make dmg`.
-- On Linux you can work on `RearviewCore` with the Swift 6 toolchain: `swift test --filter RearviewCoreTests`.
+- On Linux you can work on `TapeloopCore` with the Swift 6 toolchain: `swift test --filter TapeloopCoreTests`.
 - To use Xcode, open `Package.swift` directly.
 
 ## Rules
 - Swift 6 language mode, strict concurrency, no warnings (CI builds with `-warnings-as-errors`).
 - Format with `make format`; CI runs `swift format lint --strict`.
-- Logic that does not need Apple frameworks goes in `RearviewCore`, with tests.
+- Logic that does not need Apple frameworks goes in `TapeloopCore`, with tests.
 - No network code. CI fails if it finds `URLSession` and friends in `Sources/`.
 - UI changes: run `make snapshots` and attach the PNGs to your pull request.
 

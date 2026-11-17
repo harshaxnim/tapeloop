@@ -1,6 +1,6 @@
-# Rearview: the plan
+# Tapeloop: the plan
 
-Rearview is an open-source macOS menu bar app that keeps a rolling, local-only buffer of the
+Tapeloop is an open-source macOS menu bar app that keeps a rolling, local-only buffer of the
 screen, the microphone and the system audio, so that a user can save something after it has
 happened. This file is the converged output of the `/feature-dev` pass of step s1. Every later
 step (s2 to s5) reads it first and keeps it up to date.
@@ -17,12 +17,12 @@ Status legend used below: **[s1]** done in step 1, **[s2]** … **[s5]** owned b
 | Build | SwiftPM only (`Package.swift`). No `.xcodeproj` checked in. `make` wraps every task. |
 | Platform | macOS 14.0 deployment target (Harsha runs 14.6). macOS 15+ APIs only behind `if #available`. |
 | UI | SwiftUI for views, AppKit for the status item, popover/panel, windows, hotkeys. |
-| Storage | Plain files. Segments + a JSON-lines index in `~/Library/Application Support/Rearview/Buffer/`. Settings in `UserDefaults` through a typed `Codable` model. Library = the save folder itself plus `<name>.rearview.json` sidecars. No database. |
-| Tests | XCTest. `RearviewCoreTests` runs on Linux and macOS. Media tests run on macOS CI only, with synthetic sample buffers. |
+| Storage | Plain files. Segments + a JSON-lines index in `~/Library/Application Support/Tapeloop/Buffer/`. Settings in `UserDefaults` through a typed `Codable` model. Library = the save folder itself plus `<name>.tapeloop.json` sidecars. No database. |
+| Tests | XCTest. `TapeloopCoreTests` runs on Linux and macOS. Media tests run on macOS CI only, with synthetic sample buffers. |
 | Lint | `swift format lint --strict` with `.swift-format` (bundled with the Swift 6 toolchain). |
-| CI | GitHub Actions: `macos-15` builds, tests, makes `Rearview.app` + DMG + UI snapshot PNGs; `ubuntu` runs Core tests in the `swift:6.0` image. Tags `v*` publish a Release. |
+| CI | GitHub Actions: `macos-15` builds, tests, makes `Tapeloop.app` + DMG + UI snapshot PNGs; `ubuntu` runs Core tests in the `swift:6.0` image. Tags `v*` publish a Release. |
 | Docs | `docs/PLAN.md` (this), `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/features/<feature>/` (user and admin guides as HTML, dev notes as Markdown). |
-| Identity | Name Rearview, bundle id `io.github.harshaxnim.rearview`, MIT. Own icon (a rounded rear-view mirror with a rewind arrow), own words. Nothing from Backtrack's brand. |
+| Identity | Name Tapeloop, bundle id `io.github.harshaxnim.tapeloop`, MIT. Own icon (a rounded rear-view mirror with a rewind arrow), own words. Nothing from Backtrack's brand. |
 
 Commands: `make build`, `make test`, `make lint`, `make app`, `make dmg`, `make snapshots`, `make run`.
 
@@ -54,9 +54,9 @@ new transcribers, new exporters).
    to switch on with secrets, and documented defaults and storage paths.
 
 ### User stories
-- As any user, on first launch I see what Rearview does and grant Screen Recording and Microphone,
+- As any user, on first launch I see what Tapeloop does and grant Screen Recording and Microphone,
   with links into System Settings if I said no. (Calendar and Speech are optional, asked later.)
-- As any user, I see in the menu bar whether Rearview is recording, paused, or missing a
+- As any user, I see in the menu bar whether Tapeloop is recording, paused, or missing a
   permission.
 - As the meeting person, after a call I click the menu bar icon, drag back to the start of the
   meeting (or pick the meeting marker), and press Save. I get a file named
@@ -99,7 +99,7 @@ The 13 items of the brief's "must have" list, a DMG on the `v0.1.0` Release, doc
 ### Modules (SwiftPM targets)
 
 ```
-RearviewCore          pure Swift, Foundation only, builds and tests on Linux
+TapeloopCore          pure Swift, Foundation only, builds and tests on Linux
   ├─ TimeRange, BufferClock          span math, clamping, overlap, "last N minutes"
   ├─ Segment, SegmentIndex           what each file covers; JSON-lines persistence; rebuild from disk
   ├─ RetentionPolicy                 which segments to delete (age > buffer, total > disk cap)
@@ -109,37 +109,37 @@ RearviewCore          pure Swift, Foundation only, builds and tests on Linux
   ├─ Bookmark, MeetingSpan, SavedRecording (sidecar model)
   ├─ Transcript (+ SRT/TXT writers)  model + exporters, search
   └─ MeetingDetector (pure part)     state machine over "app X uses mic" events → spans
-RearviewCapture       macOS: ScreenCaptureKit, AVAudioEngine/Core Audio, AVAssetWriter
+TapeloopCapture       macOS: ScreenCaptureKit, AVAudioEngine/Core Audio, AVAssetWriter
   ├─ protocol CaptureSource          start/stop, emits CMSampleBuffers + kind
   ├─ ScreenSource, MicrophoneSource, SystemAudioSource (SCStream audio; macOS 14 ok)
   ├─ SegmentWriter                   rotates fragmented-MP4 files every N seconds
   └─ CaptureEngine (actor)           wires sources → writer → index; sleep/wake, device changes
-RearviewExport        macOS: protocol Exporter; CompositionExporter (AVMutableComposition + trim)
-RearviewIntelligence  macOS: protocol Transcriber (SFSpeechRecognizer on-device; newer API behind
+TapeloopExport        macOS: protocol Exporter; CompositionExporter (AVMutableComposition + trim)
+TapeloopIntelligence  macOS: protocol Transcriber (SFSpeechRecognizer on-device; newer API behind
                       #available), MicUsageMonitor (Core Audio process objects / app list),
                       CalendarProvider (EventKit), LoginItem (SMAppService)
-RearviewUI            SwiftUI views and view models (popover, timeline, library, settings,
+TapeloopUI            SwiftUI views and view models (popover, timeline, library, settings,
                       onboarding). No AppKit app lifecycle, so snapshots can render it.
-Rearview              the executable: AppDelegate, NSStatusItem, popover, windows, hotkeys,
+Tapeloop              the executable: AppDelegate, NSStatusItem, popover, windows, hotkeys,
                       notifications, wiring.
-RearviewSnapshots     executable used by CI: renders every key view (light/dark) to PNG.
+TapeloopSnapshots     executable used by CI: renders every key view (light/dark) to PNG.
 ```
 
 Dependency rule: `Core` ← everything; `Capture`, `Export`, `Intelligence` depend only on `Core`;
 `UI` depends on `Core` and talks to the engine through protocols (`RecorderControlling`,
-`LibraryStoring`) so previews/snapshots use fakes; `Rearview` wires concrete types.
+`LibraryStoring`) so previews/snapshots use fakes; `Tapeloop` wires concrete types.
 No third-party dependencies in v0.1.0 (global hotkeys use Carbon `RegisterEventHotKey`).
 
 ### Data on disk
 ```
-~/Library/Application Support/Rearview/
+~/Library/Application Support/Tapeloop/
   Buffer/
     index.jsonl                  one Segment per line (append-only, compacted by retention)
     seg-<startMillis>-<uuid>.mp4 fragmented MP4, ~60 s, video + audio tracks (or .m4a audio only)
   bookmarks.jsonl, meetings.jsonl
-<Save folder, default ~/Movies/Rearview>/
+<Save folder, default ~/Movies/Tapeloop>/
   2026-11-17 1403 Weekly sync (32m).mp4
-  2026-11-17 1403 Weekly sync (32m).rearview.json   sidecar (SavedRecording)
+  2026-11-17 1403 Weekly sync (32m).tapeloop.json   sidecar (SavedRecording)
   2026-11-17 1403 Weekly sync (32m).transcript.json (+ .txt/.srt on export)
 ```
 Every model has `schemaVersion`. Segment index entries carry: id, file, start, end, tracks
@@ -211,7 +211,7 @@ Settings" when denied.
 
 ### Menu bar icon states
 Template image of a small mirror: filled dot = recording, two bars = paused, exclamation = needs
-permission / error. Right-click menu: Open Rearview, Save last 5/15/30 min, Bookmark Moment,
+permission / error. Right-click menu: Open Tapeloop, Save last 5/15/30 min, Bookmark Moment,
 Pause/Resume, Library, Settings, Quit.
 
 ---
@@ -250,7 +250,7 @@ Pause/Resume, Library, Settings, Quit.
 
 **Riskiest assumption:** code written on Linux (no Swift toolchain on the mini) becomes a working,
 signed DMG on a macOS runner. **Proved in s1** by the scaffold: CI builds the package, runs tests,
-assembles `Rearview.app`, ad-hoc signs it with entitlements, makes the DMG, re-mounts it in CI and
+assembles `Tapeloop.app`, ad-hoc signs it with entitlements, makes the DMG, re-mounts it in CI and
 checks `Info.plist` (`LSUIElement`, usage strings, version, bundle id), the signature and the
 entitlements, and renders UI snapshots to PNG. See "s1 result" below.
 
@@ -273,7 +273,7 @@ Other risks and their answers:
 1. Linux CI: `swift test` for Core (all logic).
 2. macOS CI: `swift build` (warnings as errors), `swift test` (Core + media tests with synthetic
    buffers from s2 on), `swift format lint --strict`, `make app`, `make dmg`, DMG verify script,
-   `rearview --self-test` (s2: writes segments from a synthetic source, applies retention, saves a
+   `tapeloop --self-test` (s2: writes segments from a synthetic source, applies retention, saves a
    span, checks duration and tracks), `make snapshots` uploaded as an artifact and looked at.
 3. Release: tag `v*` → same pipeline + GitHub Release with the DMG and SHA-256.
 4. Real Mac: `docs/TESTING.md` checklist (permissions, real capture, hotkeys, meetings, sleep).
@@ -292,7 +292,7 @@ Other risks and their answers:
 - **s5:** docs, self-review, `v0.1.0`, verify released DMG, report, the Telegram message.
 
 ## 8. s1 result
-- Repo is public at https://github.com/harshaxnim/rearview with the scaffold (all files above).
+- Repo is public at https://github.com/harshaxnim/tapeloop with the scaffold (all files above).
 - **Blocked:** the mini's GitHub login lacks the `workflow` scope, so GitHub refused the push of
   `.github/workflows/ci.yml`. The workflow is parked in `ci/ci.yml`. As soon as the scope is
   granted (or Harsha moves the file on github.com), `git mv ci/ci.yml .github/workflows/ci.yml`,

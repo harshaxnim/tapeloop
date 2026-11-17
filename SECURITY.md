@@ -1,4 +1,4 @@
 # Security policy
 
-Rearview records sensitive material (screen and sound). Please report vulnerabilities privately through
+Tapeloop records sensitive material (screen and sound). Please report vulnerabilities privately through
 GitHub's "Report a vulnerability" (Security tab) instead of a public issue. Expect a reply within a week.

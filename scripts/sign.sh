@@ -3,10 +3,10 @@
 # certificate and the hardened runtime; otherwise signs ad hoc ("-"), which needs no account.
 set -euo pipefail
 APP="$1"
-ENT="$(dirname "$0")/../Resources/Rearview.entitlements"
+ENT="$(dirname "$0")/../Resources/Tapeloop.entitlements"
 
 if [[ -n "${MACOS_CERT_P12:-}" && -n "${MACOS_CERT_PASSWORD:-}" ]]; then
-  KEYCHAIN="$RUNNER_TEMP/rearview-signing.keychain-db"
+  KEYCHAIN="$RUNNER_TEMP/tapeloop-signing.keychain-db"
   KC_PASS="$(uuidgen)"
   echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
   security create-keychain -p "$KC_PASS" "$KEYCHAIN"

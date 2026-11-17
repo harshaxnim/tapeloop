@@ -2,28 +2,29 @@
 import PackageDescription
 
 let package = Package(
-    name: "Rearview",
+    name: "Tapeloop",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "RearviewCore", targets: ["RearviewCore"]),
-        .executable(name: "Rearview", targets: ["Rearview"]),
+        .library(name: "TapeloopCore", targets: ["TapeloopCore"]),
+        .executable(name: "Tapeloop", targets: ["Tapeloop"]),
     ],
     targets: [
         // Pure Swift. Builds and tests on Linux too.
-        .target(name: "RearviewCore"),
+        .target(name: "TapeloopCore"),
         // macOS-only modules. Their sources are wrapped in `#if os(macOS)` so the package still resolves on Linux.
-        .target(name: "RearviewCapture", dependencies: ["RearviewCore"]),
-        .target(name: "RearviewExport", dependencies: ["RearviewCore"]),
-        .target(name: "RearviewIntelligence", dependencies: ["RearviewCore"]),
-        .target(name: "RearviewUI", dependencies: ["RearviewCore"]),
+        .target(name: "TapeloopAudio", dependencies: ["TapeloopCore"]),
+        .target(name: "TapeloopExport", dependencies: ["TapeloopCore"]),
+        .target(name: "TapeloopIntelligence", dependencies: ["TapeloopCore"]),
+        .target(name: "TapeloopUI", dependencies: ["TapeloopCore"]),
         .executableTarget(
-            name: "Rearview",
+            name: "Tapeloop",
             dependencies: [
-                "RearviewCore", "RearviewCapture", "RearviewExport", "RearviewIntelligence", "RearviewUI",
+                "TapeloopCore", "TapeloopAudio", "TapeloopExport", "TapeloopIntelligence", "TapeloopUI",
             ]
         ),
-        .executableTarget(name: "RearviewSnapshots", dependencies: ["RearviewCore", "RearviewUI"]),
-        .testTarget(name: "RearviewCoreTests", dependencies: ["RearviewCore"]),
+        .executableTarget(name: "TapeloopSnapshots", dependencies: ["TapeloopCore", "TapeloopUI"]),
+        .testTarget(name: "TapeloopCoreTests", dependencies: ["TapeloopCore"]),
+        .testTarget(name: "TapeloopAudioTests", dependencies: ["TapeloopCore", "TapeloopAudio", "TapeloopExport"]),
     ],
     swiftLanguageModes: [.v6]
 )
