@@ -119,6 +119,15 @@
                 statusItem?.menu = menu
                 sender.performClick(nil)
                 statusItem?.menu = nil
+            } else if (NSApp.currentEvent?.clickCount ?? 1) >= 3 {
+                // A triple click offers Quit, which is otherwise only in the right-click menu.
+                closePopover()
+                statusItem?.menu = quitMenu
+                sender.performClick(nil)
+                statusItem?.menu = nil
+            } else if NSApp.currentEvent?.clickCount == 2 {
+                // The middle click of a triple click: leave the popover as the first click left it.
+                return
             } else if !controller.settings.onboardingDone {
                 // Setup is not finished (its window may be hidden behind other apps): bring it back.
                 windows.showOnboarding { [weak self] in self?.controller.start() }
@@ -126,6 +135,15 @@
                 togglePopover()
             }
         }
+
+        /// The menu a triple click on the icon shows.
+        private lazy var quitMenu: NSMenu = {
+            let menu = NSMenu()
+            let item = NSMenuItem(title: "Quit Tapeloop", action: #selector(quit), keyEquivalent: "q")
+            item.target = self
+            menu.addItem(item)
+            return menu
+        }()
 
         private func togglePopover() {
             if popover.isShown {
