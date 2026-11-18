@@ -92,12 +92,12 @@
       <p>Tapeloop lives in the menu bar as a small cassette. The dot in its corner shows what it is doing.</p>
       <figure class="mid"><img src="/img/docs/menubar-icons.png" alt="The cassette icon while recording, paused, and when it needs a permission" width="422" height="108" loading="lazy"><figcaption>Amber dot: recording. Grey dot: paused. Red ring: a permission is missing or a source stopped.</figcaption></figure>
       <p><strong>Click</strong> the icon to open the popover. <strong>Right-click</strong> it for a menu with quick saves, Bookmark Moment, Pause, Library, Settings and Quit. <strong>Triple-click</strong> it for Quit alone.</p>
-      <figure class="narrow"><img src="/img/docs/popover-recording.png" alt="The popover: a mirrored tape with the handle and its play button, bookmarks and a meeting under the tape, and Save" width="380" height="187" loading="lazy"><figcaption>The tape runs from the oldest audio on the left to now on the right.</figcaption></figure>
+      <figure class="narrow"><img src="/img/docs/popover-recording.png" alt="The popover: a mirrored tape with the handle and its play button, bookmarks and a meeting under the tape, and Save" width="380" height="154" loading="lazy"><figcaption>The tape runs from the oldest audio on the left to now on the right.</figcaption></figure>
       <ul>
-        <li><strong>Top line:</strong> a red dot while recording (grey when paused), and how much is kept ("2 h"). The <strong>•••</strong> button holds Pause, Bookmark, quick spans (the last 5, 15 or 30 minutes or the last hour), Library and Settings.</li>
+        <li><strong>Top line:</strong> a red dot that blinks while recording (grey when paused), and how much is kept ("2 h"). The <strong>•••</strong> button holds Pause, Bookmark, quick spans (the last 5, 15 or 30 minutes or the last hour), Library and Settings.</li>
         <li><strong>Tape:</strong> your voice rises above the centre line and your Mac's sound hangs below it. The span to the right of the handle, the part a save keeps, is drawn brighter.</li>
         <li><strong>Under the tape:</strong> bookmark icons, and a blue line for each meeting with its name below it.</li>
-        <li><strong>Bottom line:</strong> the span a save keeps ("Last 36 min") and <strong>Save</strong>.</li>
+        <li><strong>Beside the play button:</strong> the length a save keeps ("36 min"). <strong>Save</strong> is at the top, next to •••.</li>
       </ul>
     </section>
 
@@ -106,14 +106,14 @@
       <h3>From the popover</h3>
       <p>Drag the amber handle to the left, or choose a quick span from the <strong>•••</strong> menu. Drag it all the way left to save everything kept. Then click <strong>Save</strong> or press Return. A long save shows its progress with Cancel; when it is done, a notification offers <strong>Play</strong> and <strong>Show in Finder</strong>.</p>
       <h3>Save only a meeting</h3>
-      <p>Click a meeting's name under the tape, for example <strong>Zoom · 10:41</strong>. Both ends of the selection move to the meeting's start and end, the bottom line shows the meeting's name and length, and Save keeps only that meeting. A meeting that is still going on keeps recording into the selection.</p>
-      <figure class="narrow"><img src="/img/docs/popover-meeting-selected.png" alt="The popover with the Zoom meeting selected: both handles at the meeting's ends, and the bottom line reads Zoom · 10:41 · 40 min" width="380" height="187" loading="lazy"></figure>
+      <p>Click a meeting's name under the tape, for example <strong>Zoom · 10:41</strong>. Both ends of the selection move to the meeting's start and end, the label beside the play button shows the meeting's name and length, and Save keeps only that meeting. A meeting that is still going on keeps recording into the selection.</p>
+      <figure class="narrow"><img src="/img/docs/popover-meeting-selected.png" alt="The popover with the Zoom meeting selected: both handles at the meeting's ends, and the label reads Zoom · 10:41 · 40 min" width="380" height="154" loading="lazy"></figure>
       <h3>Choose where it ends</h3>
-      <p>The selection normally ends now. Move the pointer to the right end of the tape and a second, slimmer handle appears: drag it to the left to end the saved span earlier. The bottom line then shows the span's times. Drag it back to the right edge to end at now again.</p>
-      <figure class="narrow"><img src="/img/docs/popover-trimmed.png" alt="The popover with a trimmed span: a second handle near the right end, and the bottom line shows 10:34 AM–11:10 AM · 36 min" width="380" height="187" loading="lazy"></figure>
+      <p>The selection normally ends now. Move the pointer to the right end of the tape and a second, slimmer handle appears: drag it to the left to end the saved span earlier. The label beside the play button then shows the span's times. Drag it back to the right edge to end at now again.</p>
+      <figure class="narrow"><img src="/img/docs/popover-trimmed.png" alt="The popover with a trimmed span: a second handle near the right end, and the label shows 10:34 AM–11:10 AM · 36 min" width="380" height="154" loading="lazy"></figure>
       <h3>Listen before you save</h3>
-      <p>Click the play button on top of the handle to hear the selected span, without saving anything. The part already played turns red and the bottom line shows the position. Click again to stop. Move the handle while it plays and, when you let go, it plays on from the new place; closing the popover stops it. Drag the play button to move the handle.</p>
-      <figure class="narrow"><img src="/img/docs/popover-previewing.png" alt="The popover while previewing: the played part is red and the bottom line shows 11:31 of 36:00" width="380" height="187" loading="lazy"><figcaption>Previewing the last 36 minutes.</figcaption></figure>
+      <p>Click the play button on top of the handle to hear the selected span, without saving anything. The part already played turns red and the label beside the button shows the position. Click again to stop. Move the handle while it plays and, when you let go, it plays on from the new place; closing the popover stops it. Drag the play button to move the handle.</p>
+      <figure class="narrow"><img src="/img/docs/popover-previewing.png" alt="The popover while previewing: the played part is red and the label shows 11:31 / 36:00" width="380" height="154" loading="lazy"><figcaption>Previewing the last 36 minutes.</figcaption></figure>
       <h3>From anywhere</h3>
       <p>Press <kbd>⌃⌥S</kbd> to save the last 5 minutes (change the length and keys in Settings › Shortcuts), or right-click the icon and choose Save Last 5, 15 or 30 Minutes or Save Last Hour.</p>
       <h3>Files</h3>
@@ -125,7 +125,7 @@
     <section id="bookmarks">
       <h2>Bookmarks</h2>
       <p>A bookmark marks a moment so you can find it later. To mark a moment that has passed, move the pointer into the row under the tape: a bookmark with its time follows the pointer, and a click places it there. To mark now, choose <strong>Bookmark This Moment</strong> from the popover's ••• menu and type an optional label, press <kbd>⌃⌥B</kbd> in any app, or choose Bookmark Moment from the right-click menu. Bookmarks show as small bookmark icons under the tape, travel with a save, and let the Library's player jump to them.</p>
-      <figure class="narrow"><img src="/img/docs/popover-bookmark-hover.png" alt="The popover with an amber bookmark and the time 10:04 AM under the tape, following the pointer" width="380" height="187" loading="lazy"></figure>
+      <figure class="narrow"><img src="/img/docs/popover-bookmark-hover.png" alt="The popover with an amber bookmark and the time 10:04 AM under the tape, following the pointer" width="380" height="154" loading="lazy"></figure>
     </section>
 
     <section id="pausing">

@@ -48,6 +48,8 @@
 
         var kind: Kind
         @Environment(\.isEnabled) private var isEnabled
+        /// `.small` gives the compact header size.
+        @Environment(\.controlSize) private var controlSize
 
         /// Creates the style.
         public init(_ kind: Kind = .secondary) {
@@ -56,10 +58,10 @@
 
         public func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .font(.system(size: 12.5, weight: .semibold))
+                .font(.system(size: controlSize == .small ? 12 : 12.5, weight: .semibold))
                 .lineLimit(1)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 5)
+                .padding(.horizontal, controlSize == .small ? 10 : 11)
+                .padding(.vertical, controlSize == .small ? 3 : 5)
                 .foregroundStyle(foreground)
                 .background(
                     RoundedRectangle(cornerRadius: Tape.radius)

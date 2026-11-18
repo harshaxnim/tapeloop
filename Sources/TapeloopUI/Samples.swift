@@ -79,7 +79,7 @@
             }
             let started = PopoverState(
                 status: .recording, title: "Recording", stat: "4 min",
-                timeline: timeline(hours: 0.25, held: 240, gaps: []))
+                timeline: timeline(hours: 240.0 / 3600, gaps: []))
             let permission = PopoverState(
                 status: .needsAttention, title: "System audio is not being recorded",
                 banner: .problem(

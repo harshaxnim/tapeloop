@@ -202,12 +202,9 @@
             return result
         }
 
-        /// A "nice" axis length (5 min, 15 min, 30 min, 1 h, 2 h, …) that holds `held` seconds.
-        public static func niceSpan(for held: TimeInterval, maximum: TimeInterval) -> TimeInterval {
-            let steps: [TimeInterval] = [5, 10, 15, 30, 60, 90, 120, 180, 240, 300, 480, 600, 720].map { $0 * 60 }
-            let fit = steps.first { $0 >= held } ?? held
-            return max(min(fit, max(maximum, held)), 60)
-        }
+        /// The length of the tape's axis: exactly the audio held, so the recording fills the full width (at least 10
+        /// seconds, so a tape that has just started is not a single bar).
+        public static func axisSpan(for held: TimeInterval) -> TimeInterval { max(held, 10) }
     }
 
     /// What the popover's buttons do. The app supplies the closures.

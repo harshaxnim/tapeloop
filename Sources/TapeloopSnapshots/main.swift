@@ -33,6 +33,7 @@
 
         static func renderAll() throws {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            PopoverView.animates = false
             for (name, state, selection, quick) in Samples.popoverStates() {
                 try render("popover-\(name)") {
                     let model = PopoverModel(state: state, selection: selection)

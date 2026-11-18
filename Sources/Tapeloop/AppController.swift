@@ -213,8 +213,7 @@
 
         private func makePopoverState(now: Date) -> PopoverState {
             let held = self.held
-            let spanMax = settings.recorder.bufferDuration
-            let span = TimelineData.niceSpan(for: held, maximum: spanMax)
+            let span = TimelineData.axisSpan(for: held)
             let start = now.addingTimeInterval(-span)
             let kinds = SourceKind.allCases.filter { settings.recorder.sources.contains($0) }
             let tracks = kinds.map { engine.levelTrack(for: $0) }

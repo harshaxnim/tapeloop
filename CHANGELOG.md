@@ -19,6 +19,8 @@ The first release.
   recorded.
 - **Save only a meeting:** click a meeting under the tape and the selection becomes exactly that meeting.
 - **Bookmark a past moment:** under the tape, a bookmark with its time follows the pointer; a click places it.
+- The tape spans exactly the audio held, so a new recording fills the width. The selected length sits beside the
+  handle's play button, Save is at the top next to •••, and the recording dot blinks.
 - **Triple-click** the menu bar icon for Quit.
 - **End handle:** a second handle, shown when the pointer nears the right end of the tape, ends the selection before
   now.

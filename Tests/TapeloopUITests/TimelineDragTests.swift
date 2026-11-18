@@ -9,7 +9,13 @@
     @MainActor
     final class TimelineDragTests: XCTestCase {
         private func state(_ name: String) -> PopoverState {
-            Samples.popoverStates().first { $0.name == name }!.state
+            if name == "partial" {
+                // A tape only partly filled: 4 minutes held on a 15-minute axis (the left 70 % has no audio).
+                var state = Samples.popoverStates().first { $0.name == "just-started" }!.state
+                state.timeline = Samples.timeline(hours: 0.25, held: 240, gaps: [])
+                return state
+            }
+            return Samples.popoverStates().first { $0.name == name }!.state
         }
 
         private func harness(_ name: String, selection: TimeInterval = 36 * 60, quick: Int? = nil) -> PopoverHarness {
@@ -50,7 +56,7 @@
 
         func testPinnedSelectionFollowsTheOldestAudioAsTimePasses() {
             // A buffer that is not full yet: 4 minutes held on a 15-minute axis.
-            let h = harness("just-started", selection: 120, quick: nil)
+            let h = harness("partial", selection: 120, quick: nil)
             defer { h.close() }
             let held = h.model.state.timeline.held
             h.drag(
@@ -75,7 +81,7 @@
         }
 
         func testDraggingIntoEmptyTapeBeforeTheOldestAudioPins() {
-            let h = harness("just-started", selection: 60, quick: nil)
+            let h = harness("partial", selection: 60, quick: nil)
             defer { h.close() }
             // 4 of 15 minutes held: the left 70 % of the axis has no audio.
             h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.3))
@@ -175,7 +181,7 @@
         }
 
         func testQuickSpansLongerThanTheTapeAreUnavailable() {
-            let h = harness("just-started", selection: 120, quick: nil)
+            let h = harness("partial", selection: 120, quick: nil)
             defer { h.close() }
             XCTAssertFalse(h.model.quickSpanAvailable(15), "15 min is unavailable with 4 min held")
             XCTAssertFalse(h.model.quickSpanAvailable(60))
@@ -375,7 +381,7 @@
         }
 
         func testSelectionLongerThanWhatIsHeldIsClamped() {
-            let h = harness("just-started", selection: 3600, quick: nil)
+            let h = harness("partial", selection: 3600, quick: nil)
             defer { h.close() }
             XCTAssertEqual(h.model.clampedSelection, h.model.state.timeline.held, accuracy: 0.5)
             h.click(control: "save")
@@ -402,12 +408,12 @@
             h.pump()
             XCTAssertNotNil(h.model.pendingBookmark)
             XCTAssertTrue(h.has("labelField"))
-            XCTAssertFalse(h.has("save"), "the label field replaces the footer")
+            XCTAssertTrue(h.has("save"), "Save stays in the header while labelling")
             h.type("decision")
             h.pressReturn()
             XCTAssertEqual(h.calls, ["bookmark", "label decision"], "Return labels the bookmark and does not save")
             XCTAssertNil(h.model.pendingBookmark)
-            XCTAssertTrue(h.has("save"), "the footer comes back")
+            XCTAssertFalse(h.has("labelField"), "the field closes")
         }
 
         func testBookmarkWithoutLabelThroughAdd() {
@@ -471,7 +477,7 @@
         }
 
         func testNoBookmarkBeforeTheOldestAudio() {
-            let h = harness("just-started", selection: 120, quick: nil)
+            let h = harness("partial", selection: 120, quick: nil)
             defer { h.close() }
             h.hover(underTape(h, 0.2))
             XCTAssertFalse(h.has("bookmarkGhost"), "nothing is held there")

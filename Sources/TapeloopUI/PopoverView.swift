@@ -3,15 +3,20 @@
     import SwiftUI
     import TapeloopCore
 
-    /// The menu bar popover, kept minimal: a header line (status, length, a "more" menu), one mirrored tape (your voice
-    /// above the centre line, your Mac's sound below), and the span with Save. Bookmarks and meetings sit under the
-    /// tape. Clicking the handle's play button previews the span without saving it.
+    /// The menu bar popover, kept minimal: a header line (status, length, Save, a "more" menu) and one mirrored tape
+    /// (your voice above the centre line, your Mac's sound below) across the full width, which shows the audio held.
+    /// The selected length sits beside the handle's play button, which previews the span without saving it. Bookmarks
+    /// and meetings sit under the tape.
     ///
     /// Colour has jobs: red is live (recording, the preview playhead and what has played), amber is what you act on
     /// (the handle and Save), and the rest is grey.
     public struct PopoverView: View {
         @Bindable var model: PopoverModel
         @FocusState private var labelFocused: Bool
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        /// Off for still images (snapshots), which would otherwise catch the recording dot mid-blink.
+        nonisolated(unsafe) public static var animates = true
+        @State private var dotDim = false
 
         /// Creates the popover content.
         public init(model: PopoverModel) {
@@ -30,20 +35,15 @@
                 }
                 if let banner = state.banner { bannerView(banner).padding(.top, 10) }
                 if state.timeline.held > 0 || state.status != .needsAttention {
-                    TimelineView(model: model).padding(.top, 22)
+                    TimelineView(model: model).padding(.top, 26)
                 }
-                Group {
-                    if let saving = state.saving {
-                        savingView(saving)
-                    } else if model.pendingBookmark != nil {
-                        bookmarkField
-                    } else {
-                        footer
-                    }
+                if let saving = state.saving {
+                    savingView(saving).padding(.top, 10)
+                } else if model.pendingBookmark != nil {
+                    bookmarkField.padding(.top, 10)
                 }
-                .padding(.top, 8)
             }
-            .padding(14)
+            .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
             .frame(width: 380)
         }
 
@@ -58,6 +58,15 @@
                         .help("How much audio Tapeloop is keeping")
                 }
                 Spacer(minLength: 8)
+                if state.saving == nil {
+                    Button("Save") { model.actions.save(model.selectedRange) }
+                        .buttonStyle(.tapePrimary)
+                        .controlSize(.small)
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(state.timeline.held <= 0)
+                        .help("Save the selected \(DurationText.long(model.selectedRange.duration)) as an audio file")
+                        .reportFrame("save", to: model)
+                }
                 moreMenu
             }
         }
@@ -65,8 +74,15 @@
         @ViewBuilder private var statusDot: some View {
             switch state.status {
             case .recording:
+                // Blinks slowly while recording (steady when Reduce Motion is on).
                 Circle().fill(Tape.red).frame(width: 8, height: 8)
                     .background(Circle().fill(Tape.red.opacity(0.18)).frame(width: 14, height: 14))
+                    .opacity(dotDim ? 0.25 : 1)
+                    .onAppear {
+                        guard !reduceMotion, Self.animates else { return }
+                        withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { dotDim = true }
+                    }
+                    .onDisappear { dotDim = false }
             case .paused: Circle().fill(Tape.grey).frame(width: 8, height: 8)
             case .needsAttention: Circle().strokeBorder(Tape.red, lineWidth: 2).frame(width: 9, height: 9)
             }
@@ -160,42 +176,7 @@
             }
         }
 
-        // MARK: Footer
-
-        /// "Last 36 min", "Zoom · 10:41 · 38 min" for a clicked meeting, or "10:12–10:48 · 36 min" for a trimmed span.
-        private var selectionText: Text {
-            let range = model.selectedRange
-            let length = Text(DurationText.short(range.duration)).fontWeight(.semibold)
-            if let meeting = model.selectedMeeting {
-                return Text(meeting.label ?? "Meeting").foregroundStyle(Tape.meeting).fontWeight(.semibold)
-                    + Text(" · ").foregroundStyle(.secondary) + length
-            }
-            if model.endsNow { return Text("Last ").foregroundStyle(.secondary) + length }
-            let times =
-                "\(range.start.formatted(date: .omitted, time: .shortened))–\(range.end.formatted(date: .omitted, time: .shortened))"
-            return Text(times + " · ").foregroundStyle(.secondary) + length
-        }
-
-        /// The span a save would keep (or the preview's progress) and Save.
-        private var footer: some View {
-            HStack(spacing: 8) {
-                if let preview = state.preview {
-                    (Text("▶ Preview").foregroundStyle(Tape.red).fontWeight(.semibold)
-                        + Text("  \(DurationText.clock(preview.elapsed)) of \(DurationText.clock(preview.duration))")
-                        .foregroundStyle(.secondary))
-                        .font(.system(size: 12).monospacedDigit())
-                } else {
-                    selectionText.font(.system(size: 12.5).monospacedDigit())
-                }
-                Spacer(minLength: 6)
-                Button("Save") { model.actions.save(model.selectedRange) }
-                    .buttonStyle(.tapePrimary)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(state.timeline.held <= 0)
-                    .help("Save the selected \(DurationText.long(model.selectedRange.duration)) as an audio file")
-                    .reportFrame("save", to: model)
-            }
-        }
+        // MARK: Below the tape (only while saving or labelling a bookmark)
 
         /// A save in progress: what is being saved, a thin progress bar, and Cancel.
         private func savingView(_ saving: PopoverState.Saving) -> some View {
@@ -308,6 +289,7 @@
                         Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.tapeHeight)
                             .offset(x: selectionX - 0.75)
                             .allowsHitTesting(false)
+                        handleLabel(knobX: selectionX, width: width)
                         knob(playing: preview != nil)
                             .offset(x: selectionX - 10, y: -10)
                             .gesture(knobGesture(selectionX: selectionX, width: width))
@@ -485,6 +467,47 @@
 
         private func date(atX x: CGFloat, width: CGFloat) -> Date {
             data.start.addingTimeInterval(Double(min(max(0, x), width) / max(1, width)) * data.span)
+        }
+
+        /// Beside the play button: the selected length ("36 min"), the meeting it is ("Zoom · 10:41 · 40 min"), the times
+        /// of a trimmed span, or, while previewing, the position ("11:31 / 36:00" in red). On the right of the button,
+        /// or on its left when there is no room.
+        private func handleLabel(knobX: CGFloat, width: CGFloat) -> some View {
+            let (text, plain) = handleText
+            let measured = (plain as NSString).size(withAttributes: [.font: Self.handleFont]).width
+            let flip = knobX + 16 + measured > width
+            return text.font(Font(Self.handleFont).monospacedDigit())
+                .lineLimit(1)
+                .fixedSize()
+                .allowsHitTesting(false)
+                .reportFrame("handleLabel", to: model)
+                .offset(x: flip ? knobX - 16 - ceil(measured) : knobX + 16, y: -7)
+        }
+
+        static let handleFont = NSFont.systemFont(ofSize: 11.5, weight: .semibold)
+
+        /// The label as styled text, and as plain text for measuring.
+        private var handleText: (Text, String) {
+            if let preview = model.state.preview {
+                let plain = "\(DurationText.clock(preview.elapsed)) / \(DurationText.clock(preview.duration))"
+                return (Text(plain).foregroundStyle(Tape.red), plain)
+            }
+            let range = model.selectedRange
+            let length = DurationText.short(range.duration)
+            if let meeting = model.selectedMeeting {
+                let name = meeting.label ?? "Meeting"
+                return (
+                    Text(name).foregroundStyle(Tape.meeting) + Text(" · \(length)").foregroundStyle(.primary),
+                    "\(name) · \(length)"
+                )
+            }
+            if model.endsNow { return (Text(length).foregroundStyle(.primary), length) }
+            let times =
+                "\(range.start.formatted(date: .omitted, time: .shortened))–\(range.end.formatted(date: .omitted, time: .shortened))"
+            return (
+                Text(times + " · ").foregroundStyle(.secondary) + Text(length).foregroundStyle(.primary),
+                "\(times) · \(length)"
+            )
         }
 
         /// The handle's top: a round button that plays (or stops) the preview. Dragging it moves the handle.
