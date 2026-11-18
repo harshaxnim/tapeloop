@@ -27,6 +27,7 @@
             statusItem = item
 
             popover.behavior = .transient
+            popover.animates = false  // appears and disappears at once
             popover.delegate = self
             menu.delegate = self
 
