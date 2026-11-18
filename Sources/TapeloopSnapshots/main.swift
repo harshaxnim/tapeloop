@@ -38,6 +38,7 @@
                     let model = PopoverModel(state: state, selection: selection)
                     model.quickMinutes = quick
                     if name == "meeting" { model.quickMinutes = nil }
+                    Samples.selectSample(name, in: model)
                     return PopoverView(model: model)
                 }
             }

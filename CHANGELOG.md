@@ -17,6 +17,9 @@ The first release.
 - **Preview:** the play button on the handle plays the selected span from the handle onwards without saving it.
   Tapeloop leaves its own sound out of the system-audio recording, so a preview (or the Library's player) is not
   recorded.
+- **Save only a meeting:** click a meeting under the tape and the selection becomes exactly that meeting.
+- **End handle:** a second handle, shown when the pointer nears the right end of the tape, ends the selection before
+  now.
 - Colour has jobs: red for live (recording, the preview), amber for actions (the handle, Save), grey for the rest.
 
 ### Performance

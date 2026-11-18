@@ -30,12 +30,12 @@
             window.orderFrontRegardless()
             window.makeKey()
             var actions = PopoverActions()
-            actions.save = { [unowned self] in self.calls.append("save \(Int($0.rounded()))") }
+            actions.save = { [unowned self] in self.calls.append("save \(Int($0.duration.rounded()))") }
             actions.cancelSave = { [unowned self] in self.calls.append("cancel") }
-            actions.togglePreview = { [unowned self] seconds in
-                self.calls.append("preview \(Int(seconds.rounded()))")
+            actions.togglePreview = { [unowned self] range in
+                self.calls.append("preview \(Int(range.duration.rounded()))")
                 let model = self.model
-                model.state.preview = model.state.preview == nil ? .init(elapsed: 0, duration: seconds) : nil
+                model.state.preview = model.state.preview == nil ? .init(elapsed: 0, duration: range.duration) : nil
             }
             actions.togglePause = { [unowned self] in self.calls.append("pause") }
             actions.bookmark = { [unowned self] in
@@ -119,10 +119,26 @@
             CGPoint(x: timeline.minX + timeline.width * fraction, y: timeline.midY)
         }
 
-        /// Where the handle is (x of the selection line), from the model.
-        var handleX: CGFloat {
+        /// Where the handle is (x of the selection's start), from the model.
+        var handleX: CGFloat { x(of: model.selectedRange.start) }
+
+        /// Where the end handle is (x of the selection's end), from the model.
+        var endX: CGFloat { x(of: model.selectedRange.end) }
+
+        func x(of date: Date) -> CGFloat {
             let data = model.state.timeline
-            return timeline.minX + timeline.width * CGFloat(1 - model.clampedSelection / data.span)
+            return timeline.minX + timeline.width * CGFloat(date.timeIntervalSince(data.start) / data.span)
+        }
+
+        /// The time at `fraction` of the timeline's width.
+        func date(at fraction: Double) -> Date {
+            model.state.timeline.start.addingTimeInterval(fraction * model.state.timeline.span)
+        }
+
+        /// Moves the pointer to `point` without pressing (hover).
+        func hover(_ point: CGPoint) {
+            window.acceptsMouseMovedEvents = true
+            send(.mouseMoved, at: point)
         }
 
         // MARK: Keyboard

@@ -52,7 +52,8 @@
                 gaps: gaps.map { .init(start: at($0.0), end: at($0.1)) })
         }
 
-        /// The popover states shown in the documentation, with a short name each.
+        /// The popover states shown in the documentation, with a short name each. ``selectSample(_:in:)`` adds the
+        /// selection that a name implies (a clicked meeting, a trimmed end).
         public static func popoverStates() -> [(
             name: String, state: PopoverState, selection: TimeInterval, quick: Int?
         )] {
@@ -94,13 +95,30 @@
                 timeline: timeline(hours: 5, meetings: [(0.52, 0.86, nil)]))
             var previewing = recording
             previewing.preview = .init(elapsed: 11 * 60 + 31, duration: 36 * 60)
+            var trimmed = recording
+            trimmed.timeline.bookmarks = [.init(date: Samples.now.addingTimeInterval(-0.8 * 7200), label: nil)]
             return [
                 ("recording", recording, 36 * 60, nil), ("previewing", previewing, 36 * 60, nil),
-                ("meeting", meeting, 38 * 60, nil),
+                ("meeting", meeting, 38 * 60, nil), ("meeting-selected", recording, 36 * 60, nil),
+                ("trimmed", trimmed, 36 * 60, nil),
                 ("saving", saving, 3600, 60),
                 ("paused", paused, 45 * 60, nil), ("just-started", started, 240, 5),
                 ("needs-permission", permission, 24 * 60, nil), ("disk", disk, 30 * 60, 30),
             ]
+        }
+
+        /// Sets the selection a sample's name implies: "meeting-selected" clicks the Zoom meeting; "trimmed" ends the
+        /// selection 20 minutes before now.
+        @MainActor
+        public static func selectSample(_ name: String, in model: PopoverModel) {
+            switch name {
+            case "meeting-selected":
+                if let meeting = model.state.timeline.meetings.first { model.selectMeeting(meeting) }
+            case "trimmed":
+                model.drag(to: 50 * 60)
+                model.dragEnd(to: now.addingTimeInterval(-14 * 60))
+            default: break
+            }
         }
 
         /// Settings services with realistic, fixed answers.

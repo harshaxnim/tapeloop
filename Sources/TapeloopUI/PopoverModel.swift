@@ -212,12 +212,12 @@
 
     /// What the popover's buttons do. The app supplies the closures.
     public struct PopoverActions {
-        /// Save the last `seconds` seconds.
-        public var save: (TimeInterval) -> Void = { _ in }
+        /// Save this span (the selection: the last stretch up to now, a meeting, or a trimmed span).
+        public var save: (TimeRange) -> Void = { _ in }
         /// Cancel the save in progress.
         public var cancelSave: () -> Void = {}
-        /// Play the last `seconds` seconds without saving, or stop the preview that is playing.
-        public var togglePreview: (TimeInterval) -> Void = { _ in }
+        /// Play this span without saving, or stop the preview that is playing.
+        public var togglePreview: (TimeRange) -> Void = { _ in }
         /// Pause or resume.
         public var togglePause: () -> Void = {}
         /// Drop a bookmark now; returns its time.
@@ -252,6 +252,11 @@
         /// Whether the handle was dragged to (or past) the oldest audio: the selection is then everything held, and
         /// it follows the oldest audio as recording continues instead of staying at a fixed time.
         public var pinnedToOldest = false
+        /// A selection whose end is not now: a meeting, or a span whose end handle was dragged in. While set, both ends
+        /// stay at these times as recording goes on. `nil` means the selection ends now.
+        public var fixedRange: TimeRange?
+        /// The start of the meeting that was clicked to select it, if the selection is still exactly that meeting.
+        public var selectedMeetingStart: Date?
         /// The bookmark waiting for an optional label, if any.
         public var pendingBookmark: Date?
         /// The label being typed for it.
@@ -285,7 +290,29 @@
             return min(held, max(Self.minimumSelection, selection))
         }
 
-        /// Sets the selection from a quick span.
+        /// What Save and the preview use: the fixed span when there is one, otherwise the last
+        /// ``clampedSelection`` seconds up to now.
+        public var selectedRange: TimeRange {
+            if var range = fixedRange {
+                // Old audio is dropped as recording goes on: the start never reaches before what is held.
+                if let oldest = state.timeline.heldStart, range.start < oldest {
+                    range.start = min(oldest, range.end.addingTimeInterval(-Self.minimumSelection))
+                }
+                return range
+            }
+            let end = state.timeline.end
+            return TimeRange(start: end.addingTimeInterval(-clampedSelection), end: end)
+        }
+
+        /// Whether the selection ends now (the end handle is at the right edge, hidden until hovered).
+        public var endsNow: Bool { fixedRange == nil }
+
+        /// The meeting the selection is, if a meeting was clicked and the selection has not changed since.
+        public var selectedMeeting: TimelineData.Span? {
+            guard let start = selectedMeetingStart else { return nil }
+            return state.timeline.meetings.first { $0.start == start }
+        }
+
         /// Whether a bookmark can be added now (not while paused).
         public var canBookmark: Bool { !state.isPaused && state.status != .paused }
 
@@ -298,11 +325,14 @@
 
         /// Stops a playing preview (moving the selection ends it).
         public func stopPreview() {
-            if state.preview != nil { actions.togglePreview(0) }
+            if state.preview != nil { actions.togglePreview(selectedRange) }
         }
 
+        /// Sets the selection from a quick span (ending now).
         public func choose(minutes: Int) {
             stopPreview()
+            fixedRange = nil
+            selectedMeetingStart = nil
             quickMinutes = minutes
             pinnedToOldest = false
             selection = Double(minutes) * 60
@@ -313,9 +343,57 @@
         public func drag(to seconds: TimeInterval, pin: Bool = false) {
             stopPreview()
             quickMinutes = nil
+            selectedMeetingStart = nil
             let held = state.timeline.held
+            if var range = fixedRange {
+                // The end stays put; the start moves, at least the minimum before the end.
+                let oldest = state.timeline.heldStart ?? state.timeline.start
+                let start = pin || seconds >= held ? oldest : state.timeline.end.addingTimeInterval(-seconds)
+                range.start = min(max(start, oldest), range.end.addingTimeInterval(-Self.minimumSelection))
+                fixedRange = range
+                pinnedToOldest = false
+                return
+            }
             pinnedToOldest = held > 0 && (pin || seconds >= held)
             selection = pinnedToOldest ? held : max(Self.minimumSelection, seconds)
+        }
+
+        /// Moves the end of the selection to `date`. Within `slack` seconds of now (the right edge), the end becomes now
+        /// again and the end handle hides.
+        public func dragEnd(to date: Date, slack: TimeInterval = 0) {
+            stopPreview()
+            quickMinutes = nil
+            selectedMeetingStart = nil
+            let now = state.timeline.end
+            let start = selectedRange.start
+            if date >= now.addingTimeInterval(-max(slack, 0.5)) {
+                fixedRange = nil
+                pinnedToOldest = false
+                selection = max(Self.minimumSelection, now.timeIntervalSince(start))
+                return
+            }
+            let end = max(date, start.addingTimeInterval(Self.minimumSelection))
+            fixedRange = TimeRange(start: start, end: min(end, now))
+            pinnedToOldest = false
+        }
+
+        /// Selects exactly a meeting: both ends move to its start and end (trimmed to the audio held). A meeting still
+        /// going on keeps its end at now.
+        public func selectMeeting(_ meeting: TimelineData.Span) {
+            stopPreview()
+            quickMinutes = nil
+            let now = state.timeline.end
+            let oldest = state.timeline.heldStart ?? state.timeline.start
+            let start = max(meeting.start, oldest)
+            if meeting.end >= now.addingTimeInterval(-2) {
+                fixedRange = nil
+                pinnedToOldest = false
+                selection = max(Self.minimumSelection, now.timeIntervalSince(start))
+            } else {
+                fixedRange = TimeRange(
+                    start: start, end: max(meeting.end, start.addingTimeInterval(Self.minimumSelection)))
+            }
+            selectedMeetingStart = meeting.start
         }
 
         /// Drops a bookmark and opens the label field.

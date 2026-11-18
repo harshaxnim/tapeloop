@@ -227,6 +227,98 @@
             XCTAssertEqual(DurationText.clock(3909), "1:05:09")
         }
 
+        // MARK: Selecting a meeting, trimming the end
+
+        func testClickingAMeetingSelectsOnlyIt() {
+            let h = harness("recording")
+            defer { h.close() }
+            let zoom = h.model.state.timeline.meetings[0]
+            XCTAssertTrue(h.click(control: "meeting-0"), "the meeting's line and name are a click target")
+            XCTAssertEqual(h.model.selectedRange.start, zoom.start)
+            XCTAssertEqual(h.model.selectedRange.end, zoom.end, "the end is trimmed to the meeting's end")
+            XCTAssertEqual(h.model.selectedMeeting?.label, "Zoom · 10:41")
+            XCTAssertFalse(h.model.endsNow)
+            XCTAssertTrue(h.has("endHandle"))
+            h.click(control: "save")
+            XCTAssertEqual(h.calls, ["save \(Int(zoom.end.timeIntervalSince(zoom.start).rounded()))"])
+        }
+
+        func testAMeetingStillGoingEndsNow() {
+            let h = harness("meeting")
+            defer { h.close() }
+            h.click(control: "meeting-0")
+            XCTAssertTrue(h.model.endsNow, "a meeting that has not ended keeps recording into the selection")
+            XCTAssertEqual(h.model.selectedRange.start, h.model.state.timeline.meetings[0].start)
+            XCTAssertNotNil(h.model.selectedMeeting)
+        }
+
+        func testMeetingSelectionStaysPutAsTimePasses() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "meeting-0")
+            let range = h.model.selectedRange
+            h.advance(120)
+            XCTAssertEqual(h.model.selectedRange, range, "both ends are times, not distances from now")
+        }
+
+        func testMovingTheStartAfterAMeetingKeepsTheEnd() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "meeting-0")
+            let end = h.model.selectedRange.end
+            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.3))
+            XCTAssertEqual(h.model.selectedRange.end, end)
+            XCTAssertEqual(
+                h.model.selectedRange.start.timeIntervalSince(h.date(at: 0.3)), 0,
+                accuracy: h.model.state.timeline.span / 200)
+            XCTAssertNil(h.model.selectedMeeting, "the selection is no longer exactly the meeting")
+        }
+
+        func testEndHandleIsHiddenUntilHoveringNearTheRightEnd() {
+            let h = harness("recording")
+            defer { h.close() }
+            XCTAssertTrue(h.model.endsNow)
+            h.hover(h.timelinePoint(0.5))
+            h.hover(CGPoint(x: h.timeline.maxX - 6, y: h.timeline.minY + 20))
+            guard let grip = h.model.controlFrames["endHandle"] else { return XCTFail("no end handle") }
+            h.drag(from: CGPoint(x: grip.midX, y: grip.midY), to: h.timelinePoint(0.8))
+            XCTAssertFalse(h.model.endsNow)
+            XCTAssertEqual(
+                h.model.selectedRange.end.timeIntervalSince(h.date(at: 0.8)), 0,
+                accuracy: h.model.state.timeline.span / 150)
+            h.click(control: "save")
+            XCTAssertEqual(h.calls, ["save \(Int(h.model.selectedRange.duration.rounded()))"])
+        }
+
+        func testDraggingTheEndBackToTheRightEdgeEndsNow() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.model.dragEnd(to: h.date(at: 0.8))
+            h.pump()
+            h.drag(
+                from: CGPoint(x: h.endX, y: h.timeline.minY + 20),
+                to: CGPoint(x: h.timeline.maxX + 30, y: h.timeline.minY + 20))
+            XCTAssertTrue(h.model.endsNow)
+            XCTAssertEqual(h.model.selectedRange.duration, h.model.clampedSelection, accuracy: 0.01)
+        }
+
+        func testTheEndCannotPassTheStart() {
+            let h = harness("recording", selection: 600, quick: nil)
+            defer { h.close() }
+            h.model.dragEnd(to: h.date(at: 0.1))
+            XCTAssertEqual(h.model.selectedRange.duration, PopoverModel.minimumSelection, accuracy: 0.01)
+        }
+
+        func testQuickSpanEndsNowAgain() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "meeting-0")
+            h.model.choose(minutes: 15)
+            XCTAssertTrue(h.model.endsNow)
+            XCTAssertNil(h.model.selectedMeeting)
+            XCTAssertEqual(h.model.selectedRange.duration, 900, accuracy: 0.01)
+        }
+
         // MARK: Save, keyboard
 
         func testSaveSendsTheSelection() {

@@ -162,6 +162,20 @@
 
         // MARK: Footer
 
+        /// "Last 36 min", "Zoom · 10:41 · 38 min" for a clicked meeting, or "10:12–10:48 · 36 min" for a trimmed span.
+        private var selectionText: Text {
+            let range = model.selectedRange
+            let length = Text(DurationText.short(range.duration)).fontWeight(.semibold)
+            if let meeting = model.selectedMeeting {
+                return Text(meeting.label ?? "Meeting").foregroundStyle(Tape.meeting).fontWeight(.semibold)
+                    + Text(" · ").foregroundStyle(.secondary) + length
+            }
+            if model.endsNow { return Text("Last ").foregroundStyle(.secondary) + length }
+            let times =
+                "\(range.start.formatted(date: .omitted, time: .shortened))–\(range.end.formatted(date: .omitted, time: .shortened))"
+            return Text(times + " · ").foregroundStyle(.secondary) + length
+        }
+
         /// The span a save would keep (or the preview's progress) and Save.
         private var footer: some View {
             HStack(spacing: 8) {
@@ -171,16 +185,14 @@
                         .foregroundStyle(.secondary))
                         .font(.system(size: 12).monospacedDigit())
                 } else {
-                    (Text("Last ").foregroundStyle(.secondary)
-                        + Text(DurationText.short(model.clampedSelection)).fontWeight(.semibold))
-                        .font(.system(size: 12.5).monospacedDigit())
+                    selectionText.font(.system(size: 12.5).monospacedDigit())
                 }
                 Spacer(minLength: 6)
-                Button("Save") { model.actions.save(model.clampedSelection) }
+                Button("Save") { model.actions.save(model.selectedRange) }
                     .buttonStyle(.tapePrimary)
                     .keyboardShortcut(.defaultAction)
                     .disabled(state.timeline.held <= 0)
-                    .help("Save the last \(DurationText.long(model.clampedSelection)) as an audio file")
+                    .help("Save the selected \(DurationText.long(model.selectedRange.duration)) as an audio file")
                     .reportFrame("save", to: model)
             }
         }
@@ -254,18 +266,34 @@
         private let barWidth: CGFloat = 1
 
         @State private var knobDrag: (start: CGFloat, moved: Bool)?
+        /// Where the pointer is over the tape, for showing the end handle near the right end.
+        @State private var hoverX: CGFloat?
+        @State private var draggingEnd = false
+        /// How near the right end (in points) the pointer brings out the end handle.
+        static let endReveal: CGFloat = 36
 
         private var data: TimelineData { model.state.timeline }
 
         var body: some View {
             GeometryReader { proxy in
                 let width = proxy.size.width
-                let selectionX = x(forSecondsBack: model.clampedSelection, width: width)
+                let range = model.selectedRange
+                let selectionX = xOf(range.start, width: width)
+                let endX = min(width, xOf(range.end, width: width))
                 let preview = model.state.preview
-                let playX = preview.map { selectionX + (width - selectionX) * CGFloat($0.fraction) }
+                let playX = preview.map { selectionX + (endX - selectionX) * CGFloat($0.fraction) }
+                let showEnd = !model.endsNow || draggingEnd || (hoverX.map { $0 > width - Self.endReveal } ?? false)
                 ZStack(alignment: .topLeading) {
-                    Canvas { context, size in draw(in: &context, size: size, selectionX: selectionX, playX: playX) }
+                    Canvas { context, size in
+                        draw(in: &context, size: size, selectionX: selectionX, endX: endX, playX: playX)
+                    }
+                    meetingTargets(width: width)
                     if data.held > 0 {
+                        // The grab area stays inside the tape (clicks past its edge are lost); the drawing sits on the end.
+                        let grabX = min(endX - 10, width - 20)
+                        endHandle(visible: showEnd, shift: endX - 10 - grabX)
+                            .offset(x: grabX)
+                            .gesture(endGesture(width: width))
                         if let playX {
                             Rectangle().fill(Tape.red).frame(width: 1.5, height: Self.tapeHeight).offset(
                                 x: playX - 0.75
@@ -281,7 +309,15 @@
                     }
                 }
                 .contentShape(Rectangle())
-                .help("Top: your voice. Bottom: your Mac's sound. Drag to choose how far back to save.")
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let point): hoverX = point.x
+                    case .ended: hoverX = nil
+                    }
+                }
+                .help(
+                    "Top: your voice. Bottom: your Mac's sound. Drag to choose where to start; hover over the right end to move the end."
+                )
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { value in
                         let target = secondsBack(atX: value.location.x, width: width)
@@ -290,6 +326,7 @@
                 )
             }
             .frame(height: Self.height)
+            .coordinateSpace(.named("tape"))
             .background(
                 GeometryReader { proxy in
                     Color.clear
@@ -299,7 +336,7 @@
             )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Rewind timeline")
-            .accessibilityValue("Saving the last \(DurationText.long(model.clampedSelection))")
+            .accessibilityValue("Saving \(DurationText.long(model.selectedRange.duration))")
             .accessibilityAdjustableAction { direction in
                 let step: TimeInterval = 60
                 switch direction {
@@ -308,7 +345,60 @@
                 default: break
                 }
             }
-            .accessibilityAction(named: "Preview") { model.actions.togglePreview(model.clampedSelection) }
+            .accessibilityAction(named: "Preview") { model.actions.togglePreview(model.selectedRange) }
+        }
+
+        /// The end of the selection: a slim grip on a line. Hidden while the selection ends now, until the pointer comes
+        /// near the right end; always shown once the end has been moved in.
+        private func endHandle(visible: Bool, shift: CGFloat) -> some View {
+            // Only the drawing fades: the grab area is always there, so a drag that starts as the handle appears works.
+            ZStack {
+                Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.tapeHeight)
+                Capsule().fill(Tape.amber)
+                    .frame(width: 7, height: 20)
+                    .overlay(Capsule().fill(Tape.onAmber.opacity(0.5)).frame(width: 1.5, height: 9))
+                    .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
+            }
+            .offset(x: shift)
+            .opacity(visible ? 1 : 0)
+            .animation(.easeOut(duration: 0.15), value: visible)
+            .frame(width: 20, height: Self.tapeHeight)
+            .contentShape(Rectangle())
+            .help("Drag to choose where the saved span ends; back to the right edge to end now")
+            .reportFrame("endHandle", to: model)
+        }
+
+        private func endGesture(width: CGFloat) -> some Gesture {
+            DragGesture(minimumDistance: 0, coordinateSpace: .named("tape"))
+                .onChanged { value in
+                    draggingEnd = true
+                    let date = date(atX: value.location.x, width: width)
+                    // Within a few points of the right edge counts as now.
+                    let slack = Double(Self.pinSlop / max(1, width)) * data.span
+                    model.dragEnd(to: date, slack: slack)
+                }
+                .onEnded { _ in draggingEnd = false }
+        }
+
+        /// Invisible click targets over each meeting's line and name: a click selects exactly that meeting.
+        private func meetingTargets(width: CGFloat) -> some View {
+            ForEach(Array(data.meetings.enumerated()), id: \.offset) { index, meeting in
+                let x0 = max(0, xOf(meeting.start, width: width))
+                let x1 = min(width, xOf(meeting.end, width: width))
+                if x1 > x0 {
+                    Rectangle().fill(Color.clear)
+                        .frame(width: max(x1 - x0, 64), height: Self.markerHeight)
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.selectMeeting(meeting) }
+                        .help("Select only \(meeting.label.map { "the \($0) meeting" } ?? "this meeting")")
+                        .reportFrame("meeting-\(index)", to: model)
+                        .offset(x: min(x0, width - max(x1 - x0, 64)), y: Self.tapeHeight)
+                }
+            }
+        }
+
+        private func date(atX x: CGFloat, width: CGFloat) -> Date {
+            data.start.addingTimeInterval(Double(min(max(0, x), width) / max(1, width)) * data.span)
         }
 
         /// The handle's top: a round button that plays (or stops) the preview. Dragging it moves the handle.
@@ -340,7 +430,7 @@
                     }
                 }
                 .onEnded { _ in
-                    if knobDrag?.moved == false { model.actions.togglePreview(model.clampedSelection) }
+                    if knobDrag?.moved == false { model.actions.togglePreview(model.selectedRange) }
                     knobDrag = nil
                 }
         }
@@ -377,7 +467,9 @@
             return peak
         }
 
-        private func draw(in context: inout GraphicsContext, size: CGSize, selectionX: CGFloat, playX: CGFloat?) {
+        private func draw(
+            in context: inout GraphicsContext, size: CGSize, selectionX: CGFloat, endX: CGFloat, playX: CGFloat?
+        ) {
             let width = size.width
             let mid = Self.tapeHeight / 2
             let reach = mid - 2
@@ -406,7 +498,7 @@
                     bar.addRect(CGRect(x: x, y: mid + 1.5, width: barWidth, height: downHeight))
                     if let playX, x >= selectionX, x <= playX {
                         playedPath.addPath(bar)
-                    } else if x >= selectionX {
+                    } else if x >= selectionX, x <= endX {
                         keptPath.addPath(bar)
                     } else {
                         restPath.addPath(bar)

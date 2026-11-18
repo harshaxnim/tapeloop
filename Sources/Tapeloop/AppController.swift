@@ -324,9 +324,9 @@
 
         private func wirePopoverActions() {
             var actions = PopoverActions()
-            actions.save = { [weak self] seconds in self?.saveLast(seconds: seconds) }
+            actions.save = { [weak self] range in self?.saveSelection(range) }
             actions.cancelSave = { [weak self] in self?.saveTask?.cancel() }
-            actions.togglePreview = { [weak self] seconds in self?.togglePreview(seconds: seconds) }
+            actions.togglePreview = { [weak self] range in self?.togglePreview(range: range) }
             actions.togglePause = { [weak self] in self?.togglePause() }
             actions.bookmark = { [weak self] in self?.addBookmark() }
             actions.labelBookmark = { [weak self] date, label in self?.labelBookmark(at: date, label) }
@@ -396,14 +396,13 @@
         private var previewPreparing = false
         private var previewTimer: Timer?
 
-        /// Plays the last `seconds` seconds without saving them, or stops the preview that is playing.
-        func togglePreview(seconds: TimeInterval) {
+        /// Plays the selected span without saving it, or stops the preview that is playing.
+        func togglePreview(range selected: TimeRange) {
             if previewPlayer != nil || previewPreparing {
                 stopPreview()
                 return
             }
-            let now = Date()
-            let range = TimeRange(start: now.addingTimeInterval(-min(seconds, max(1, held))), end: now)
+            let range = live(selected)
             let pieces = engine.exportPieces(for: range)
             guard !pieces.isEmpty else { return }
             previewPreparing = true
@@ -454,6 +453,17 @@
         // MARK: - Saving
 
         var isSaving: Bool { saveTask != nil }
+
+        /// The popover's selection as of this moment: a selection that ends now is drawn up to the last refresh, so
+        /// its end moves to the present.
+        private func live(_ range: TimeRange) -> TimeRange {
+            popover.endsNow ? TimeRange(start: range.start, end: max(range.end, Date())) : range
+        }
+
+        /// Saves the popover's selection (the last minutes, a clicked meeting, or a trimmed span).
+        func saveSelection(_ range: TimeRange) {
+            save(range: live(range))
+        }
 
         func saveLast(seconds: TimeInterval) {
             let now = Date()
