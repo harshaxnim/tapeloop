@@ -212,26 +212,59 @@
             XCTAssertEqual(h.calls, [], "a drag is not a click")
         }
 
-        func testSeekingWhilePlayingGoesOnFromTheNewPlace() {
+        func testDraggingWhilePlayingFollowsTheHandle() {
+            let saved = PopoverModel.scrubInterval
+            PopoverModel.scrubInterval = 0
+            defer { PopoverModel.scrubInterval = saved }
             let h = harness("recording")
             defer { h.close() }
             h.click(control: "knob")
+            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5), steps: 6)
+            let restarts = h.calls.filter { $0.hasPrefix("restart") }
+            XCTAssertGreaterThanOrEqual(restarts.count, 4, "playback follows the handle during the drag: \(h.calls)")
+            XCTAssertEqual(
+                h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))", "and ends where it was let go"
+            )
             XCTAssertNotNil(h.model.state.preview)
-            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5))
-            XCTAssertNotNil(h.model.state.preview, "the preview keeps playing")
-            XCTAssertEqual(h.calls.count, 2, "one restart when the drag is released, not one per step: \(h.calls)")
+        }
+
+        func testScrubbingIsThrottled() {
+            let saved = PopoverModel.scrubInterval
+            PopoverModel.scrubInterval = 10
+            defer { PopoverModel.scrubInterval = saved }
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "knob")
+            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5), steps: 12)
+            XCTAssertEqual(
+                h.calls.filter { $0.hasPrefix("restart") }.count, 2, "one during the drag, one on release: \(h.calls)")
             XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
         }
 
-        func testSeekingWithTheKnobOrEndHandleOrAMeetingRestartsToo() {
+        func testMovingTheEndWhilePlayingKeepsThePosition() {
             let h = harness("recording")
             defer { h.close() }
             h.click(control: "knob")
-            guard let knob = h.model.controlFrames["knob"] else { return XCTFail("no knob") }
-            h.drag(from: CGPoint(x: knob.midX, y: knob.midY), to: CGPoint(x: knob.midX - 60, y: knob.midY))
-            XCTAssertTrue(h.calls.last?.hasPrefix("restart") ?? false, "\(h.calls)")
+            h.model.state.preview?.elapsed = 100
             h.drag(from: CGPoint(x: h.endX - 2, y: h.timeline.minY + 20), to: h.timelinePoint(0.9))
-            XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
+            let duration = Int(h.model.selectedRange.duration.rounded())
+            XCTAssertEqual(h.calls.last, "continue 100 of \(duration)", "no jump back to the start: \(h.calls)")
+            XCTAssertFalse(h.calls.dropFirst().contains { $0.hasPrefix("restart") })
+        }
+
+        func testMovingTheEndBeforeWhatHasPlayedStops() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "knob")
+            h.model.state.preview?.elapsed = 30 * 60
+            h.drag(from: CGPoint(x: h.endX - 2, y: h.timeline.minY + 20), to: h.timelinePoint(0.9))
+            XCTAssertNil(h.model.state.preview, "the trimmed span has already been heard")
+        }
+
+        func testMeetingOrQuickSpanWhilePlayingRestarts() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "knob")
             h.click(control: "meeting-0")
             XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
             h.model.choose(minutes: 5)

@@ -318,12 +318,13 @@
             actions.save = { [weak self] range in self?.saveSelection(range) }
             actions.cancelSave = { [weak self] in self?.saveTask?.cancel() }
             actions.togglePreview = { [weak self] range in self?.togglePreview(range: range) }
-            actions.restartPreview = { [weak self] range in
+            actions.restartPreview = { [weak self] range, from in
                 guard let self else { return }
                 self.stopPreview()
                 // Keep showing "playing" while the new span is prepared, so the button does not flicker.
-                self.popover.state.preview = .init(elapsed: 0, duration: range.duration)
-                self.togglePreview(range: range)
+                self.popover.state.preview = .init(
+                    elapsed: max(0, from.timeIntervalSince(range.start)), duration: range.duration)
+                self.togglePreview(range: range, from: from)
             }
             actions.togglePause = { [weak self] in self?.togglePause() }
             actions.bookmark = { [weak self] in self?.addBookmark() }
@@ -405,13 +406,20 @@
         private var previewPreparing = false
         private var previewTimer: Timer?
 
-        /// Plays the selected span without saving it, or stops the preview that is playing.
-        func togglePreview(range selected: TimeRange) {
+        /// Plays the selected span without saving it (from `from`, when given), or stops the preview that is playing.
+        /// Progress is reported over the whole span, so the played part is drawn from the span's start.
+        func togglePreview(range selected: TimeRange, from: Date? = nil) {
             if previewPlayer != nil || previewPreparing {
                 stopPreview()
                 return
             }
-            let range = live(selected)
+            let whole = live(selected)
+            let offset = from.map { min(max(0, $0.timeIntervalSince(whole.start)), whole.duration) } ?? 0
+            guard whole.duration - offset > 0.2 else {
+                popover.state.preview = nil
+                return
+            }
+            let range = TimeRange(start: whole.start.addingTimeInterval(offset), end: whole.end)
             let pieces = engine.exportPieces(for: range)
             guard !pieces.isEmpty else {
                 popover.state.preview = nil
@@ -448,12 +456,13 @@
                 let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
                     MainActor.assumeIsolated {
                         guard let self, let player = self.previewPlayer else { return }
-                        self.popover.state.preview = .init(elapsed: player.elapsed, duration: player.duration)
+                        self.popover.state.preview = .init(
+                            elapsed: offset + player.elapsed, duration: whole.duration)
                     }
                 }
                 RunLoop.main.add(timer, forMode: .common)
                 self.previewTimer = timer
-                self.popover.state.preview = .init(elapsed: 0, duration: player.duration)
+                self.popover.state.preview = .init(elapsed: offset, duration: whole.duration)
             }
         }
 

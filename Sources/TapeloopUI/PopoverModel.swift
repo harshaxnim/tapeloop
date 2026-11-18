@@ -215,8 +215,9 @@
         public var cancelSave: () -> Void = {}
         /// Play this span without saving, or stop the preview that is playing.
         public var togglePreview: (TimeRange) -> Void = { _ in }
-        /// Play this span from its start in place of the preview that is playing (the selection moved).
-        public var restartPreview: (TimeRange) -> Void = { _ in }
+        /// Play this span from the given moment in it, in place of the preview that is playing (the selection moved).
+        /// Progress is reported over the whole span.
+        public var restartPreview: (TimeRange, Date) -> Void = { _, _ in }
         /// Pause or resume.
         public var togglePause: () -> Void = {}
         /// Drop a bookmark now; returns its time.
@@ -332,11 +333,53 @@
             if state.preview != nil { actions.togglePreview(selectedRange) }
         }
 
-        /// Call when a change of the selection is complete (a drag released, a meeting clicked, a quick span chosen):
-        /// a preview that is playing goes on from the new selection. During a drag it keeps playing what it was
-        /// playing, so the sound does not stutter.
+        /// How often a drag of the start restarts a playing preview (it follows the handle without stuttering).
+        nonisolated(unsafe) public static var scrubInterval: TimeInterval = 0.15
+        @ObservationIgnored private var lastScrub = Date.distantPast
+        @ObservationIgnored private var lastScrubRange: TimeRange?
+
+        /// While a preview plays, moving the start makes it play from the new start, at most every
+        /// ``scrubInterval`` (the end moving does not change what is heard until it is released).
+        private func startMoved() {
+            guard state.preview != nil, Date().timeIntervalSince(lastScrub) >= Self.scrubInterval else { return }
+            scrub(selectedRange, from: selectedRange.start)
+        }
+
+        private func scrub(_ range: TimeRange, from: Date) {
+            lastScrub = Date()
+            lastScrubRange = range
+            actions.restartPreview(range, from)
+        }
+
+        /// Call when a change of the selection is complete (a drag released, a meeting clicked, a quick span chosen).
+        /// A playing preview goes on from the new start; when only the end moved, it goes on from where it is to the
+        /// new end (and stops if that part has already played).
         public func selectionSettled() {
-            if state.preview != nil { actions.restartPreview(selectedRange) }
+            guard let preview = state.preview else { return }
+            let range = selectedRange
+            defer { lastScrub = .distantPast }
+            if range == lastScrubRange { return }
+            if let previous = lastScrubRange ?? playingRange, previous.start == range.start {
+                let position = range.start.addingTimeInterval(preview.elapsed)
+                if position >= range.end.addingTimeInterval(-0.2) {
+                    stopPreview()
+                } else {
+                    scrub(range, from: position)
+                }
+                return
+            }
+            scrub(range, from: range.start)
+        }
+
+        /// The span the preview was started on (set when the play button starts it).
+        @ObservationIgnored public var playingRange: TimeRange?
+
+        /// The play button: plays the selection, or stops the preview that is playing.
+        public func togglePreview() {
+            playingRange = selectedRange
+            lastScrubRange = nil
+            lastScrub = .distantPast
+            actions.togglePreview(selectedRange)
         }
 
         /// Sets the selection from a quick span (ending now).
@@ -352,6 +395,7 @@
         /// Sets the selection by dragging (or the keyboard). Reaching what is held pins the selection to the oldest
         /// audio; `pin` forces that (the handle was dragged past the oldest audio).
         public func drag(to seconds: TimeInterval, pin: Bool = false) {
+            defer { startMoved() }
             quickMinutes = nil
             selectedMeetingStart = nil
             let held = state.timeline.held

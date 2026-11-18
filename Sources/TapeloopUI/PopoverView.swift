@@ -338,7 +338,7 @@
                 default: break
                 }
             }
-            .accessibilityAction(named: "Preview") { model.actions.togglePreview(model.selectedRange) }
+            .accessibilityAction(named: "Preview") { model.togglePreview() }
         }
 
         /// The end of the selection: a slim grip on a line. Hidden while the selection ends now, until the pointer comes
@@ -540,7 +540,7 @@
                 }
                 .onEnded { _ in
                     if knobDrag?.moved == false {
-                        model.actions.togglePreview(model.selectedRange)
+                        model.togglePreview()
                     } else {
                         model.selectionSettled()
                     }
