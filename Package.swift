@@ -50,8 +50,8 @@ let package = Package(
         .executableTarget(
             name: "TapeloopBench",
             dependencies: [
-                "TapeloopCore", "TapeloopAudio", "TapeloopExport", "TapeloopParakeet", "TapeloopIntelligence",
-            ]),
+                "TapeloopCore", "TapeloopAudio", "TapeloopExport", "TapeloopIntelligence",
+            ] + appDependencies),
         .testTarget(name: "TapeloopCoreTests", dependencies: ["TapeloopCore"]),
         .testTarget(name: "TapeloopAudioTests", dependencies: ["TapeloopCore", "TapeloopAudio", "TapeloopExport"]),
         .testTarget(name: "TapeloopIntelligenceTests", dependencies: ["TapeloopCore", "TapeloopIntelligence"]),

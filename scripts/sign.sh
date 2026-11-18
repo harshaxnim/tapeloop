@@ -21,7 +21,8 @@ sign_bundle() {
     [[ -e "$framework" ]] || continue
     codesign --force "$@" -s "$identity" "$framework"
   done
-  codesign --force "$@" "${APP_ONLY[@]}" --entitlements "$ENT" -s "$identity" "$APP"
+  # (The odd expansion keeps an empty array working under `set -u` in macOS's bash 3.2.)
+  codesign --force "$@" ${APP_ONLY[@]+"${APP_ONLY[@]}"} --entitlements "$ENT" -s "$identity" "$APP"
 }
 APP_ONLY=()
 
