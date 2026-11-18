@@ -266,8 +266,6 @@
         private let barWidth: CGFloat = 1
 
         @State private var knobDrag: (start: CGFloat, moved: Bool)?
-        /// Where the pointer is over the tape, for showing the end handle near the right end.
-        @State private var hoverX: CGFloat?
         @State private var draggingEnd = false
         /// How near the right end (in points) the pointer brings out the end handle.
         static let endReveal: CGFloat = 36
@@ -282,12 +280,19 @@
                 let endX = min(width, xOf(range.end, width: width))
                 let preview = model.state.preview
                 let playX = preview.map { selectionX + (endX - selectionX) * CGFloat($0.fraction) }
-                let showEnd = !model.endsNow || draggingEnd || (hoverX.map { $0 > width - Self.endReveal } ?? false)
+                let hover = model.timelineHover
+                let showEnd =
+                    !model.endsNow || draggingEnd
+                    || (hover.map { $0.x > width - Self.endReveal && $0.y < Self.tapeHeight } ?? false)
                 ZStack(alignment: .topLeading) {
                     Canvas { context, size in
                         draw(in: &context, size: size, selectionX: selectionX, endX: endX, playX: playX)
                     }
+                    bookmarkRow(width: width)
                     meetingTargets(width: width)
+                    if let ghostX = ghostBookmarkX(width: width) {
+                        ghostBookmark(at: ghostX, width: width)
+                    }
                     if data.held > 0 {
                         // The grab area stays inside the tape (clicks past its edge are lost); the drawing sits on the end.
                         let grabX = min(endX - 10, width - 20)
@@ -311,12 +316,12 @@
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
                     switch phase {
-                    case .active(let point): hoverX = point.x
-                    case .ended: hoverX = nil
+                    case .active(let point): model.timelineHover = point
+                    case .ended: model.timelineHover = nil
                     }
                 }
                 .help(
-                    "Top: your voice. Bottom: your Mac's sound. Drag to choose where to start; hover over the right end to move the end."
+                    "Top: your voice. Bottom: your Mac's sound. Drag to choose where to start; hover over the right end to move the end; click under the tape to bookmark a moment."
                 )
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { value in
@@ -380,21 +385,93 @@
                 .onEnded { _ in draggingEnd = false }
         }
 
-        /// Invisible click targets over each meeting's line and name: a click selects exactly that meeting.
+        /// Invisible click targets over each meeting's name (or its line, for a meeting without one): a click selects
+        /// exactly that meeting. The rest of the row under the tape places bookmarks.
         private func meetingTargets(width: CGFloat) -> some View {
             ForEach(Array(data.meetings.enumerated()), id: \.offset) { index, meeting in
-                let x0 = max(0, xOf(meeting.start, width: width))
-                let x1 = min(width, xOf(meeting.end, width: width))
-                if x1 > x0 {
+                if let rect = meetingTarget(meeting, width: width) {
                     Rectangle().fill(Color.clear)
-                        .frame(width: max(x1 - x0, 64), height: Self.markerHeight)
+                        .frame(width: rect.width, height: rect.height)
                         .contentShape(Rectangle())
                         .onTapGesture { model.selectMeeting(meeting) }
                         .help("Select only \(meeting.label.map { "the \($0) meeting" } ?? "this meeting")")
                         .reportFrame("meeting-\(index)", to: model)
-                        .offset(x: min(x0, width - max(x1 - x0, 64)), y: Self.tapeHeight)
+                        .offset(x: rect.minX, y: rect.minY)
                 }
             }
+        }
+
+        static let labelFont = NSFont.systemFont(ofSize: 9.5, weight: .medium)
+        private static var markerTop: CGFloat { tapeHeight + 4 }
+
+        /// Where a meeting's name is drawn.
+        private func labelRect(_ meeting: TimelineData.Span, width: CGFloat) -> CGRect? {
+            guard let label = meeting.label else { return nil }
+            let x0 = max(0, xOf(meeting.start, width: width))
+            guard min(width, xOf(meeting.end, width: width)) > x0 else { return nil }
+            let size = (label as NSString).size(withAttributes: [.font: Self.labelFont])
+            let left = min(x0, max(0, width - size.width))
+            return CGRect(x: left, y: Self.markerTop + 8, width: ceil(size.width), height: ceil(size.height))
+        }
+
+        /// The click target that selects a meeting: its name, padded a little, or its line when it has no name.
+        private func meetingTarget(_ meeting: TimelineData.Span, width: CGFloat) -> CGRect? {
+            if let rect = labelRect(meeting, width: width) { return rect.insetBy(dx: -3, dy: -2) }
+            let x0 = max(0, xOf(meeting.start, width: width))
+            let x1 = min(width, xOf(meeting.end, width: width))
+            guard x1 > x0 else { return nil }
+            return CGRect(x: x0, y: Self.markerTop - 4, width: x1 - x0, height: 10)
+        }
+
+        /// The row under the tape: a click places a bookmark at that moment.
+        private func bookmarkRow(width: CGFloat) -> some View {
+            Rectangle().fill(Color.clear)
+                .frame(width: width, height: Self.markerHeight)
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { location in
+                    // The bookmark goes where the following icon shows it; without hover (keyboard, tests), at the click.
+                    if model.timelineHover != nil {
+                        guard let x = ghostBookmarkX(width: width) else { return }
+                        model.bookmark(at: date(atX: x, width: width))
+                    } else {
+                        model.bookmark(at: date(atX: location.x, width: width))
+                    }
+                }
+                .reportFrame("bookmarkRow", to: model)
+                .offset(y: Self.tapeHeight)
+        }
+
+        /// Where the bookmark that follows the pointer is, if the pointer is in the row under the tape, over audio
+        /// that is held, and not over a meeting's name.
+        private func ghostBookmarkX(width: CGFloat) -> CGFloat? {
+            guard let hover = model.timelineHover, hover.y >= Self.tapeHeight, hover.y <= Self.height, data.held > 0,
+                model.pendingBookmark == nil
+            else { return nil }
+            let oldest = xOf(data.heldStart ?? data.start, width: width)
+            guard hover.x >= oldest - 2, hover.x <= width + 1 else { return nil }
+            if data.meetings.contains(where: { meetingTarget($0, width: width)?.contains(hover) ?? false }) {
+                return nil
+            }
+            return min(max(hover.x, oldest), width)
+        }
+
+        /// The bookmark a click would place, with its time.
+        private func ghostBookmark(at x: CGFloat, width: CGFloat) -> some View {
+            let time = date(atX: x, width: width).formatted(date: .omitted, time: .shortened)
+            let textWidth = (time as NSString).size(withAttributes: [.font: Self.labelFont]).width
+            let flip = x + 6 + textWidth > width
+            let icon = Image(systemName: "bookmark.fill").resizable().frame(width: 7, height: 9)
+                .foregroundStyle(Tape.amber)
+            return HStack(spacing: 3) {
+                if flip { Text(time).font(Font(Self.labelFont)).foregroundStyle(Tape.amber) }
+                icon
+                if !flip { Text(time).font(Font(Self.labelFont)).foregroundStyle(Tape.amber) }
+            }
+            .fixedSize()
+            .allowsHitTesting(false)
+            .reportFrame("bookmarkGhost", to: model)
+            // The icon's centre is on the pointer.
+            .offset(x: flip ? x - ceil(textWidth) - 3 - 3.5 : x - 3.5, y: Self.tapeHeight + 1)
         }
 
         private func date(atX x: CGFloat, width: CGFloat) -> Date {
@@ -519,13 +596,10 @@
                 context.fill(
                     Path(roundedRect: CGRect(x: x0, y: markerTop, width: x1 - x0, height: 2), cornerRadius: 1),
                     with: .color(Tape.meeting.opacity(0.85)))
-                if let label = meeting.label {
-                    var text = context.resolve(
-                        Text(label).font(.system(size: 9.5, weight: .medium)).foregroundStyle(Tape.meeting))
+                if let label = meeting.label, let rect = labelRect(meeting, width: width) {
+                    var text = context.resolve(Text(label).font(Font(Self.labelFont)))
                     text.shading = .color(Tape.meeting)
-                    let measured = text.measure(in: CGSize(width: 300, height: 20))
-                    let left = min(max(0, x0), max(0, width - measured.width))
-                    context.draw(text, at: CGPoint(x: left, y: markerTop + 8), anchor: .topLeading)
+                    context.draw(text, at: rect.origin, anchor: .topLeading)
                 }
             }
             var mark = context.resolve(Image(systemName: "bookmark.fill"))

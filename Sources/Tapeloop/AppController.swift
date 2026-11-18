@@ -329,6 +329,7 @@
             actions.togglePreview = { [weak self] range in self?.togglePreview(range: range) }
             actions.togglePause = { [weak self] in self?.togglePause() }
             actions.bookmark = { [weak self] in self?.addBookmark() }
+            actions.bookmarkAt = { [weak self] date in self?.addBookmark(at: date) }
             actions.labelBookmark = { [weak self] date, label in self?.labelBookmark(at: date, label) }
             actions.saveMeeting = { [weak self] id in self?.saveMeeting(id: id) }
             actions.fixProblem = { [weak self] in self?.openPrivacySettings() }
@@ -360,6 +361,16 @@
             guard status.isRecording else { return nil }
             let date = Date()
             bookmarks.append(Bookmark(date: date, label: label))
+            refresh()
+            return date
+        }
+
+        /// Bookmarks an earlier moment picked on the tape (kept in time order). Allowed while paused: the audio exists.
+        func addBookmark(at date: Date) -> Date? {
+            guard held > 0 else { return nil }
+            let date = min(date, Date())
+            let index = bookmarks.firstIndex { $0.date > date } ?? bookmarks.endIndex
+            bookmarks.insert(Bookmark(date: date, label: nil), at: index)
             refresh()
             return date
         }

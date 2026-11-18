@@ -18,6 +18,7 @@ The first release.
   Tapeloop leaves its own sound out of the system-audio recording, so a preview (or the Library's player) is not
   recorded.
 - **Save only a meeting:** click a meeting under the tape and the selection becomes exactly that meeting.
+- **Bookmark a past moment:** under the tape, a bookmark with its time follows the pointer; a click places it.
 - **Triple-click** the menu bar icon for Quit.
 - **End handle:** a second handle, shown when the pointer nears the right end of the tape, ends the selection before
   now.

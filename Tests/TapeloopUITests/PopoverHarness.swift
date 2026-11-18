@@ -42,6 +42,11 @@
                 self.calls.append("bookmark")
                 return Samples.now
             }
+            actions.bookmarkAt = { [unowned self] date in
+                let back = Int(self.model.state.timeline.end.timeIntervalSince(date).rounded())
+                self.calls.append("bookmark \(back)s ago")
+                return date
+            }
             actions.labelBookmark = { [unowned self] _, label in self.calls.append("label \(label)") }
             actions.saveMeeting = { [unowned self] _ in self.calls.append("saveMeeting") }
             actions.fixProblem = { [unowned self] in self.calls.append("fix") }
@@ -135,10 +140,11 @@
             model.state.timeline.start.addingTimeInterval(fraction * model.state.timeline.span)
         }
 
-        /// Moves the pointer to `point` without pressing (hover).
+        /// Puts the pointer over `point` (in the window, like the other helpers) without pressing. Test windows do not
+        /// get the system's hover tracking, so this sets what the view's hover handler would set.
         func hover(_ point: CGPoint) {
-            window.acceptsMouseMovedEvents = true
-            send(.mouseMoved, at: point)
+            model.timelineHover = CGPoint(x: point.x - timeline.minX, y: point.y - timeline.minY)
+            pump()
         }
 
         // MARK: Keyboard

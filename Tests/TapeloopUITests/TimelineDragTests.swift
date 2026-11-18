@@ -394,6 +394,72 @@
             XCTAssertNil(h.model.pendingBookmark)
         }
 
+        /// A point in the row under the tape at `fraction` of the width, clear of the meeting's name.
+        private func underTape(_ h: PopoverHarness, _ fraction: CGFloat) -> CGPoint {
+            CGPoint(x: h.timeline.minX + h.timeline.width * fraction, y: h.timeline.minY + TimelineView.tapeHeight + 4)
+        }
+
+        func testABookmarkFollowsThePointerUnderTheTape() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.hover(h.timelinePoint(0.4))
+            XCTAssertFalse(h.has("bookmarkGhost"), "not over the tape itself")
+            h.hover(underTape(h, 0.4))
+            guard let ghost = h.model.controlFrames["bookmarkGhost"], ghost.width > 0 else {
+                return XCTFail("no bookmark under the pointer")
+            }
+            XCTAssertEqual(ghost.minX + 3.5, underTape(h, 0.4).x, accuracy: 1.5, "the icon is centred on the pointer")
+            h.hover(underTape(h, 0.6))
+            XCTAssertEqual(h.model.controlFrames["bookmarkGhost"]!.minX + 3.5, underTape(h, 0.6).x, accuracy: 1.5)
+        }
+
+        func testClickingUnderTheTapeBookmarksThatMoment() {
+            let h = harness("recording")
+            defer { h.close() }
+            let selection = h.model.selectedRange
+            h.hover(underTape(h, 0.4))
+            h.click(underTape(h, 0.4))
+            let back = Int((0.6 * h.model.state.timeline.span).rounded())
+            guard let call = h.calls.first, call.hasPrefix("bookmark "),
+                let seconds = Int(call.split(separator: " ")[1].dropLast())
+            else {
+                return XCTFail("no bookmark: \(h.calls)")
+            }
+            XCTAssertEqual(Double(seconds), Double(back), accuracy: h.model.state.timeline.span / 150)
+            XCTAssertNotNil(h.model.pendingBookmark, "the label field opens")
+            XCTAssertEqual(h.model.selectedRange, selection, "a bookmark does not move the handles")
+            h.type("idea")
+            h.pressReturn()
+            XCTAssertEqual(h.calls.last, "label idea")
+        }
+
+        func testBookmarkingOverAMeetingLineStillBookmarks() {
+            let h = harness("recording")
+            defer { h.close() }
+            // The Zoom meeting spans 52 % to 86 %; its name sits at the left end of its line.
+            h.click(
+                CGPoint(x: h.timeline.minX + h.timeline.width * 0.75, y: h.timeline.minY + TimelineView.tapeHeight + 5))
+            XCTAssertEqual(h.calls.count, 1)
+            XCTAssertTrue(h.calls[0].hasPrefix("bookmark "))
+            XCTAssertNil(h.model.selectedMeeting)
+        }
+
+        func testNoBookmarkBeforeTheOldestAudio() {
+            let h = harness("just-started", selection: 120, quick: nil)
+            defer { h.close() }
+            h.hover(underTape(h, 0.2))
+            XCTAssertFalse(h.has("bookmarkGhost"), "nothing is held there")
+            h.click(underTape(h, 0.2))
+            XCTAssertEqual(h.calls, [])
+        }
+
+        func testBookmarkingThePastWorksWhilePaused() {
+            let h = harness("paused")
+            defer { h.close() }
+            h.click(underTape(h, 0.5))
+            XCTAssertEqual(h.calls.count, 1, "the audio at that moment exists")
+        }
+
         func testEscapeClosesTheLabelField() {
             let h = harness("recording")
             defer { h.close() }

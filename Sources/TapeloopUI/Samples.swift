@@ -101,6 +101,7 @@
                 ("recording", recording, 36 * 60, nil), ("previewing", previewing, 36 * 60, nil),
                 ("meeting", meeting, 38 * 60, nil), ("meeting-selected", recording, 36 * 60, nil),
                 ("trimmed", trimmed, 36 * 60, nil),
+                ("bookmark-hover", recording, 36 * 60, nil),
                 ("saving", saving, 3600, 60),
                 ("paused", paused, 45 * 60, nil), ("just-started", started, 240, 5),
                 ("needs-permission", permission, 24 * 60, nil), ("disk", disk, 30 * 60, 30),
@@ -114,6 +115,8 @@
             switch name {
             case "meeting-selected":
                 if let meeting = model.state.timeline.meetings.first { model.selectMeeting(meeting) }
+            case "bookmark-hover":
+                model.timelineHover = CGPoint(x: 118, y: TimelineView.tapeHeight + 6)
             case "trimmed":
                 model.drag(to: 50 * 60)
                 model.dragEnd(to: now.addingTimeInterval(-14 * 60))

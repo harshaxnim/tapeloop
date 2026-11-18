@@ -222,6 +222,8 @@
         public var togglePause: () -> Void = {}
         /// Drop a bookmark now; returns its time.
         public var bookmark: () -> Date? = { nil }
+        /// Drop a bookmark at an earlier moment (picked on the tape); returns its time.
+        public var bookmarkAt: (Date) -> Date? = { _ in nil }
         /// Label the bookmark made at a time.
         public var labelBookmark: (Date, String) -> Void = { _, _ in }
         /// Save the meeting with this id.
@@ -257,6 +259,9 @@
         public var fixedRange: TimeRange?
         /// The start of the meeting that was clicked to select it, if the selection is still exactly that meeting.
         public var selectedMeetingStart: Date?
+        /// Where the pointer is over the timeline, in the timeline's coordinates (`nil` when it is elsewhere). Near the
+        /// right end it brings out the end handle; under the tape it shows the bookmark a click would place.
+        public var timelineHover: CGPoint?
         /// The bookmark waiting for an optional label, if any.
         public var pendingBookmark: Date?
         /// The label being typed for it.
@@ -400,6 +405,17 @@
         public func bookmark() {
             guard canBookmark, let date = actions.bookmark() else { return }
             pendingBookmark = date
+            bookmarkLabel = ""
+        }
+
+        /// Drops a bookmark at `date` (a moment picked under the tape) and opens the label field. Works while paused:
+        /// the audio at that moment exists.
+        public func bookmark(at date: Date) {
+            let data = state.timeline
+            guard data.held > 0, let oldest = data.heldStart, date >= oldest.addingTimeInterval(-1), date <= data.end,
+                let placed = actions.bookmarkAt(min(max(date, oldest), data.end))
+            else { return }
+            pendingBookmark = placed
             bookmarkLabel = ""
         }
 
