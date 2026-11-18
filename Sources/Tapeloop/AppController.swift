@@ -319,6 +319,13 @@
             actions.save = { [weak self] range in self?.saveSelection(range) }
             actions.cancelSave = { [weak self] in self?.saveTask?.cancel() }
             actions.togglePreview = { [weak self] range in self?.togglePreview(range: range) }
+            actions.restartPreview = { [weak self] range in
+                guard let self else { return }
+                self.stopPreview()
+                // Keep showing "playing" while the new span is prepared, so the button does not flicker.
+                self.popover.state.preview = .init(elapsed: 0, duration: range.duration)
+                self.togglePreview(range: range)
+            }
             actions.togglePause = { [weak self] in self?.togglePause() }
             actions.bookmark = { [weak self] in self?.addBookmark() }
             actions.bookmarkAt = { [weak self] date in self?.addBookmark(at: date) }
@@ -407,7 +414,10 @@
             }
             let range = live(selected)
             let pieces = engine.exportPieces(for: range)
-            guard !pieces.isEmpty else { return }
+            guard !pieces.isEmpty else {
+                popover.state.preview = nil
+                return
+            }
             previewPreparing = true
             Task { [weak self] in
                 // Reading the disk part (if any) and preparing the decoders happen off the main thread.
@@ -424,11 +434,15 @@
                     return
                 }
                 self.previewPreparing = false
-                guard let player else { return }
+                guard let player else {
+                    self.popover.state.preview = nil
+                    return
+                }
                 do {
                     try player.start { [weak self] in MainActor.assumeIsolated { self?.stopPreview() } }
                 } catch {
                     self.log.error("Preview failed: \(String(describing: error), privacy: .public)")
+                    self.popover.state.preview = nil
                     return
                 }
                 self.previewPlayer = player

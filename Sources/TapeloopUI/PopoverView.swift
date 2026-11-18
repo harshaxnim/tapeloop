@@ -324,10 +324,12 @@
                     "Top: your voice. Bottom: your Mac's sound. Drag to choose where to start; hover over the right end to move the end; click under the tape to bookmark a moment."
                 )
                 .gesture(
-                    DragGesture(minimumDistance: 0).onChanged { value in
-                        let target = secondsBack(atX: value.location.x, width: width)
-                        model.drag(to: target.seconds, pin: target.pinned)
-                    }
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let target = secondsBack(atX: value.location.x, width: width)
+                            model.drag(to: target.seconds, pin: target.pinned)
+                        }
+                        .onEnded { _ in model.selectionSettled() }
                 )
             }
             .frame(height: Self.height)
@@ -345,8 +347,12 @@
             .accessibilityAdjustableAction { direction in
                 let step: TimeInterval = 60
                 switch direction {
-                case .increment: model.drag(to: model.clampedSelection + step)
-                case .decrement: model.drag(to: model.clampedSelection - step)
+                case .increment:
+                    model.drag(to: model.clampedSelection + step)
+                    model.selectionSettled()
+                case .decrement:
+                    model.drag(to: model.clampedSelection - step)
+                    model.selectionSettled()
                 default: break
                 }
             }
@@ -382,7 +388,10 @@
                     let slack = Double(Self.pinSlop / max(1, width)) * data.span
                     model.dragEnd(to: date, slack: slack)
                 }
-                .onEnded { _ in draggingEnd = false }
+                .onEnded { _ in
+                    draggingEnd = false
+                    model.selectionSettled()
+                }
         }
 
         /// Invisible click targets over each meeting's name (or its line, for a meeting without one): a click selects
@@ -507,7 +516,11 @@
                     }
                 }
                 .onEnded { _ in
-                    if knobDrag?.moved == false { model.actions.togglePreview(model.selectedRange) }
+                    if knobDrag?.moved == false {
+                        model.actions.togglePreview(model.selectedRange)
+                    } else {
+                        model.selectionSettled()
+                    }
                     knobDrag = nil
                 }
         }

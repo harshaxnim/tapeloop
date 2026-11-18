@@ -218,6 +218,8 @@
         public var cancelSave: () -> Void = {}
         /// Play this span without saving, or stop the preview that is playing.
         public var togglePreview: (TimeRange) -> Void = { _ in }
+        /// Play this span from its start in place of the preview that is playing (the selection moved).
+        public var restartPreview: (TimeRange) -> Void = { _ in }
         /// Pause or resume.
         public var togglePause: () -> Void = {}
         /// Drop a bookmark now; returns its time.
@@ -328,25 +330,31 @@
             return held > 0 && (minutes == Self.quickSpans[0] || Double(minutes) * 60 <= held + 30)
         }
 
-        /// Stops a playing preview (moving the selection ends it).
+        /// Stops a playing preview.
         public func stopPreview() {
             if state.preview != nil { actions.togglePreview(selectedRange) }
         }
 
+        /// Call when a change of the selection is complete (a drag released, a meeting clicked, a quick span chosen):
+        /// a preview that is playing goes on from the new selection. During a drag it keeps playing what it was
+        /// playing, so the sound does not stutter.
+        public func selectionSettled() {
+            if state.preview != nil { actions.restartPreview(selectedRange) }
+        }
+
         /// Sets the selection from a quick span (ending now).
         public func choose(minutes: Int) {
-            stopPreview()
             fixedRange = nil
             selectedMeetingStart = nil
             quickMinutes = minutes
             pinnedToOldest = false
             selection = Double(minutes) * 60
+            selectionSettled()
         }
 
         /// Sets the selection by dragging (or the keyboard). Reaching what is held pins the selection to the oldest
         /// audio; `pin` forces that (the handle was dragged past the oldest audio).
         public func drag(to seconds: TimeInterval, pin: Bool = false) {
-            stopPreview()
             quickMinutes = nil
             selectedMeetingStart = nil
             let held = state.timeline.held
@@ -366,7 +374,6 @@
         /// Moves the end of the selection to `date`. Within `slack` seconds of now (the right edge), the end becomes now
         /// again and the end handle hides.
         public func dragEnd(to date: Date, slack: TimeInterval = 0) {
-            stopPreview()
             quickMinutes = nil
             selectedMeetingStart = nil
             let now = state.timeline.end
@@ -385,7 +392,6 @@
         /// Selects exactly a meeting: both ends move to its start and end (trimmed to the audio held). A meeting still
         /// going on keeps its end at now.
         public func selectMeeting(_ meeting: TimelineData.Span) {
-            stopPreview()
             quickMinutes = nil
             let now = state.timeline.end
             let oldest = state.timeline.heldStart ?? state.timeline.start
@@ -399,6 +405,7 @@
                     start: start, end: max(meeting.end, start.addingTimeInterval(Self.minimumSelection)))
             }
             selectedMeetingStart = meeting.start
+            selectionSettled()
         }
 
         /// Drops a bookmark and opens the label field.

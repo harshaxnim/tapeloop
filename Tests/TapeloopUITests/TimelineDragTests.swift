@@ -206,14 +206,40 @@
             XCTAssertEqual(h.calls, [], "a drag is not a click")
         }
 
-        func testMovingTheSelectionStopsThePreview() {
+        func testSeekingWhilePlayingGoesOnFromTheNewPlace() {
             let h = harness("recording")
             defer { h.close() }
             h.click(control: "knob")
             XCTAssertNotNil(h.model.state.preview)
             h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5))
-            XCTAssertNil(h.model.state.preview, "moving the handle ends the preview")
-            XCTAssertEqual(h.calls.count, 2)
+            XCTAssertNotNil(h.model.state.preview, "the preview keeps playing")
+            XCTAssertEqual(h.calls.count, 2, "one restart when the drag is released, not one per step: \(h.calls)")
+            XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
+        }
+
+        func testSeekingWithTheKnobOrEndHandleOrAMeetingRestartsToo() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "knob")
+            guard let knob = h.model.controlFrames["knob"] else { return XCTFail("no knob") }
+            h.drag(from: CGPoint(x: knob.midX, y: knob.midY), to: CGPoint(x: knob.midX - 60, y: knob.midY))
+            XCTAssertTrue(h.calls.last?.hasPrefix("restart") ?? false, "\(h.calls)")
+            h.drag(from: CGPoint(x: h.endX - 2, y: h.timeline.minY + 20), to: h.timelinePoint(0.9))
+            XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
+            h.click(control: "meeting-0")
+            XCTAssertEqual(h.calls.last, "restart \(Int(h.model.selectedRange.duration.rounded()))")
+            h.model.choose(minutes: 5)
+            XCTAssertEqual(h.calls.last, "restart 300")
+            XCTAssertNotNil(h.model.state.preview)
+        }
+
+        func testSeekingWhenNotPlayingDoesNotPlay() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5))
+            h.click(control: "meeting-0")
+            XCTAssertEqual(h.calls, [])
+            XCTAssertNil(h.model.state.preview)
         }
 
         func testPreviewShowsProgressInsteadOfTheSpan() {
