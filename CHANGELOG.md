@@ -10,6 +10,15 @@ All notable changes to Tapeloop are listed here. The format follows
 
 The first release.
 
+### Popover
+
+- One mirrored tape (your voice above the line, your Mac's sound below), hairline bars, bookmark icons and meetings
+  (with their names) under the tape, and a single ••• menu for Pause, Bookmark, quick spans, Library and Settings.
+- **Preview:** the play button on the handle plays the selected span from the handle onwards without saving it.
+  Tapeloop leaves its own sound out of the system-audio recording, so a preview (or the Library's player) is not
+  recorded.
+- Colour has jobs: red for live (recording, the preview), amber for actions (the handle, Save), grey for the rest.
+
 ### Performance
 
 Measured on an M2 MacBook Air while recording both sources (see `docs/TESTING.md` § 1.1 and 1.2).

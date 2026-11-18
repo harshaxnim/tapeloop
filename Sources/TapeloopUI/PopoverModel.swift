@@ -8,9 +8,9 @@
     public struct PopoverState: Equatable, Sendable {
         /// The headline state (it also picks the status dot's colour).
         public var status: RecorderStatus
-        /// The headline, for example "Recording to memory".
+        /// The headline, for example "Recording".
         public var title: String
-        /// The right-hand figure, for example "2 h kept".
+        /// How much is kept, for example "2 h".
         public var stat: String?
         /// The line under the headline.
         public var subtitle: String?
@@ -22,11 +22,13 @@
         public var isPaused: Bool
         /// The save in progress, if any.
         public var saving: Saving?
+        /// The preview playing, if any.
+        public var preview: Preview?
 
         /// Creates a state.
         public init(
             status: RecorderStatus, title: String, stat: String? = nil, subtitle: String? = nil, banner: Banner? = nil,
-            timeline: TimelineData, isPaused: Bool = false, saving: Saving? = nil
+            timeline: TimelineData, isPaused: Bool = false, saving: Saving? = nil, preview: Preview? = nil
         ) {
             self.status = status
             self.title = title
@@ -36,6 +38,24 @@
             self.timeline = timeline
             self.isPaused = isPaused
             self.saving = saving
+            self.preview = preview
+        }
+
+        /// A preview of the selected span: played from the handle towards now, without saving.
+        public struct Preview: Equatable, Sendable {
+            /// Seconds heard so far.
+            public var elapsed: TimeInterval
+            /// The length of the span being previewed.
+            public var duration: TimeInterval
+
+            /// Creates a value.
+            public init(elapsed: TimeInterval, duration: TimeInterval) {
+                self.elapsed = elapsed
+                self.duration = duration
+            }
+
+            /// How far through the span the preview is, 0 to 1.
+            public var fraction: Double { duration > 0 ? min(1, max(0, elapsed / duration)) : 0 }
         }
 
         /// A banner above the timeline.
@@ -196,6 +216,8 @@
         public var save: (TimeInterval) -> Void = { _ in }
         /// Cancel the save in progress.
         public var cancelSave: () -> Void = {}
+        /// Play the last `seconds` seconds without saving, or stop the preview that is playing.
+        public var togglePreview: (TimeInterval) -> Void = { _ in }
         /// Pause or resume.
         public var togglePause: () -> Void = {}
         /// Drop a bookmark now; returns its time.
@@ -264,7 +286,23 @@
         }
 
         /// Sets the selection from a quick span.
+        /// Whether a bookmark can be added now (not while paused).
+        public var canBookmark: Bool { !state.isPaused && state.status != .paused }
+
+        /// Whether the quick span of `minutes` can be chosen: something is held and, except for the shortest span, the
+        /// tape is long enough (within 30 seconds).
+        public func quickSpanAvailable(_ minutes: Int) -> Bool {
+            let held = state.timeline.held
+            return held > 0 && (minutes == Self.quickSpans[0] || Double(minutes) * 60 <= held + 30)
+        }
+
+        /// Stops a playing preview (moving the selection ends it).
+        public func stopPreview() {
+            if state.preview != nil { actions.togglePreview(0) }
+        }
+
         public func choose(minutes: Int) {
+            stopPreview()
             quickMinutes = minutes
             pinnedToOldest = false
             selection = Double(minutes) * 60
@@ -273,6 +311,7 @@
         /// Sets the selection by dragging (or the keyboard). Reaching what is held pins the selection to the oldest
         /// audio; `pin` forces that (the handle was dragged past the oldest audio).
         public func drag(to seconds: TimeInterval, pin: Bool = false) {
+            stopPreview()
             quickMinutes = nil
             let held = state.timeline.held
             pinnedToOldest = held > 0 && (pin || seconds >= held)
@@ -281,7 +320,7 @@
 
         /// Drops a bookmark and opens the label field.
         public func bookmark() {
-            guard let date = actions.bookmark() else { return }
+            guard canBookmark, let date = actions.bookmark() else { return }
             pendingBookmark = date
             bookmarkLabel = ""
         }
@@ -306,6 +345,13 @@
             let m = s / 60
             if m < 60 { return "\(m) min" }
             return String(format: "%d h %02d", m / 60, m % 60)
+        }
+
+        /// A clock reading: "0:07", "11:31", "1:05:09".
+        public static func clock(_ seconds: TimeInterval) -> String {
+            let s = max(0, Int(seconds.rounded(.down)))
+            if s >= 3600 { return String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) }
+            return String(format: "%d:%02d", s / 60, s % 60)
         }
 
         /// "45 seconds", "12 min", "1 h 5 min", "2 h".

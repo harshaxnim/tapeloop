@@ -22,8 +22,7 @@
             let h = harness("recording")
             defer { h.close() }
             XCTAssertGreaterThan(h.timeline.width, 300, "\(h.timeline)")
-            for name in ["chip-5", "chip-15", "chip-30", "chip-60", "save", "pause", "bookmark", "library", "settings"]
-            {
+            for name in ["knob", "save", "more"] {
                 XCTAssertTrue(h.has(name), "missing \(name): \(h.model.controlFrames.keys.sorted())")
             }
         }
@@ -142,48 +141,90 @@
             XCTAssertEqual(h.calls.last, "save \(Int(h.model.state.timeline.held.rounded()))")
         }
 
-        // MARK: Quick spans
+        // MARK: Quick spans (in the "more" menu; the menu calls these model methods)
 
-        func testChipsSelectAndHighlight() {
+        func testQuickSpansSelect() {
             let h = harness("recording")
             defer { h.close() }
             for minutes in [5, 15, 30, 60] {
-                XCTAssertTrue(h.click(control: "chip-\(minutes)"))
+                XCTAssertTrue(h.model.quickSpanAvailable(minutes))
+                h.model.choose(minutes: minutes)
+                h.pump()
                 XCTAssertEqual(h.model.quickMinutes, minutes)
                 XCTAssertEqual(h.model.clampedSelection, Double(minutes) * 60)
                 XCTAssertFalse(h.model.pinnedToOldest)
             }
         }
 
-        func testChipAfterPinningUnpins() {
+        func testQuickSpanAfterPinningUnpins() {
             let h = harness("recording")
             defer { h.close() }
             h.drag(
                 from: CGPoint(x: h.handleX, y: h.timeline.midY),
                 to: CGPoint(x: h.timeline.minX - 50, y: h.timeline.midY))
-            h.click(control: "chip-15")
+            h.model.choose(minutes: 15)
             XCTAssertFalse(h.model.pinnedToOldest)
             XCTAssertEqual(h.model.clampedSelection, 900)
         }
 
-        func testDraggingClearsTheChip() {
+        func testDraggingClearsTheQuickSpan() {
             let h = harness("recording", selection: 300, quick: 5)
             defer { h.close() }
             h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.6))
             XCTAssertNil(h.model.quickMinutes)
         }
 
-        func testChipsLongerThanTheTapeAreDisabled() {
+        func testQuickSpansLongerThanTheTapeAreUnavailable() {
             let h = harness("just-started", selection: 120, quick: nil)
             defer { h.close() }
-            h.click(control: "chip-15")
-            XCTAssertNotEqual(h.model.quickMinutes, 15, "15 min is disabled with 4 min held")
-            h.click(control: "chip-60")
-            XCTAssertNotEqual(h.model.quickMinutes, 60)
-            h.click(control: "chip-5")
-            XCTAssertEqual(h.model.quickMinutes, 5, "5 min stays enabled")
+            XCTAssertFalse(h.model.quickSpanAvailable(15), "15 min is unavailable with 4 min held")
+            XCTAssertFalse(h.model.quickSpanAvailable(60))
+            XCTAssertTrue(h.model.quickSpanAvailable(5), "5 min stays available")
+            h.model.choose(minutes: 5)
             XCTAssertEqual(
                 h.model.clampedSelection, h.model.state.timeline.held, accuracy: 0.5, "and saves what exists")
+        }
+
+        // MARK: Preview (the handle's play button)
+
+        func testClickingTheKnobPreviewsTheSelection() {
+            let h = harness("recording", selection: 900, quick: 15)
+            defer { h.close() }
+            XCTAssertTrue(h.click(control: "knob"))
+            XCTAssertEqual(h.calls, ["preview 900"])
+            XCTAssertEqual(h.model.clampedSelection, 900, "a click does not move the handle")
+            XCTAssertTrue(h.click(control: "knob"))
+            XCTAssertEqual(h.calls, ["preview 900", "preview 900"], "a second click stops it")
+        }
+
+        func testDraggingTheKnobMovesTheHandleWithoutPlaying() {
+            let h = harness("recording")
+            defer { h.close() }
+            guard let knob = h.model.controlFrames["knob"] else { return XCTFail("no knob") }
+            h.drag(from: CGPoint(x: knob.midX, y: knob.midY), to: CGPoint(x: h.timeline.minX - 40, y: knob.midY))
+            XCTAssertTrue(h.model.pinnedToOldest)
+            XCTAssertEqual(h.calls, [], "a drag is not a click")
+        }
+
+        func testMovingTheSelectionStopsThePreview() {
+            let h = harness("recording")
+            defer { h.close() }
+            h.click(control: "knob")
+            XCTAssertNotNil(h.model.state.preview)
+            h.drag(from: CGPoint(x: h.handleX, y: h.timeline.midY), to: h.timelinePoint(0.5))
+            XCTAssertNil(h.model.state.preview, "moving the handle ends the preview")
+            XCTAssertEqual(h.calls.count, 2)
+        }
+
+        func testPreviewShowsProgressInsteadOfTheSpan() {
+            var playing = state("recording")
+            playing.preview = .init(elapsed: 691, duration: 2160)
+            let h = PopoverHarness(state: playing, selection: 2160)
+            defer { h.close() }
+            XCTAssertTrue(h.has("save"), "Save stays available while previewing")
+            XCTAssertEqual(playing.preview?.fraction ?? 0, 691.0 / 2160, accuracy: 0.0001)
+            XCTAssertEqual(DurationText.clock(691), "11:31")
+            XCTAssertEqual(DurationText.clock(3909), "1:05:09")
         }
 
         // MARK: Save, keyboard
@@ -209,7 +250,7 @@
             let h = PopoverHarness(state: empty)
             defer { h.close() }
             h.click(control: "save")
-            h.click(control: "chip-5")
+            XCTAssertFalse(h.model.quickSpanAvailable(5), "no quick span without audio")
             h.click(h.timelinePoint(0.5))
             XCTAssertEqual(h.calls, [])
             XCTAssertFalse(h.model.pinnedToOldest)
@@ -239,21 +280,23 @@
         func testBookmarkWithLabel() {
             let h = harness("recording")
             defer { h.close() }
-            XCTAssertTrue(h.click(control: "bookmark"))
+            h.model.bookmark()
+            h.pump()
             XCTAssertNotNil(h.model.pendingBookmark)
             XCTAssertTrue(h.has("labelField"))
-            XCTAssertFalse(h.has("save"), "the label field replaces the chips")
+            XCTAssertFalse(h.has("save"), "the label field replaces the footer")
             h.type("decision")
             h.pressReturn()
             XCTAssertEqual(h.calls, ["bookmark", "label decision"], "Return labels the bookmark and does not save")
             XCTAssertNil(h.model.pendingBookmark)
-            XCTAssertTrue(h.has("save"), "the chips come back")
+            XCTAssertTrue(h.has("save"), "the footer comes back")
         }
 
         func testBookmarkWithoutLabelThroughAdd() {
             let h = harness("recording")
             defer { h.close() }
-            h.click(control: "bookmark")
+            h.model.bookmark()
+            h.pump()
             h.click(control: "add")
             XCTAssertEqual(h.calls, ["bookmark"], "an empty label is not stored")
             XCTAssertNil(h.model.pendingBookmark)
@@ -262,7 +305,8 @@
         func testEscapeClosesTheLabelField() {
             let h = harness("recording")
             defer { h.close() }
-            h.click(control: "bookmark")
+            h.model.bookmark()
+            h.pump()
             h.type("x")
             h.pressEscape()
             XCTAssertNil(h.model.pendingBookmark)
@@ -271,28 +315,20 @@
         func testBookmarkIsDisabledWhilePaused() {
             let h = harness("paused")
             defer { h.close() }
-            h.click(control: "bookmark")
+            XCTAssertFalse(h.model.canBookmark)
+            h.model.bookmark()
             XCTAssertEqual(h.calls, [])
             XCTAssertNil(h.model.pendingBookmark)
         }
 
         // MARK: Tools and banners
 
-        func testToolButtons() {
-            let h = harness("recording")
-            defer { h.close() }
-            h.click(control: "pause")
-            h.click(control: "library")
-            h.click(control: "settings")
-            XCTAssertEqual(h.calls, ["pause", "library", "settings"])
-        }
-
-        func testPausedShowsResumeAndStillSaves() {
+        func testPausedStillSaves() {
             let h = harness("paused", selection: 600, quick: nil)
             defer { h.close() }
-            h.click(control: "pause")
+            XCTAssertTrue(h.has("more"), "pause, Library and Settings are in the more menu")
             h.click(control: "save")
-            XCTAssertEqual(h.calls, ["pause", "save 600"])
+            XCTAssertEqual(h.calls, ["save 600"])
         }
 
         func testMeetingBanner() {

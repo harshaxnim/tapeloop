@@ -1,9 +1,14 @@
 #if os(macOS)
+    import AppKit
     import SwiftUI
     import TapeloopCore
 
-    /// The menu bar popover: status, the rewind timeline, quick spans, Save, and the tool row. Kept minimal: one header
-    /// line, the tape, its two ends, the spans with Save, and four icon buttons (labels are in their tooltips).
+    /// The menu bar popover, kept minimal: a header line (status, length, a "more" menu), one mirrored tape (your voice
+    /// above the centre line, your Mac's sound below), and the span with Save. Bookmarks and meetings sit under the
+    /// tape. Clicking the handle's play button previews the span without saving it.
+    ///
+    /// Colour has jobs: red is live (recording, the preview playhead and what has played), amber is what you act on
+    /// (the handle and Save), and the rest is grey.
     public struct PopoverView: View {
         @Bindable var model: PopoverModel
         @FocusState private var labelFocused: Bool
@@ -18,19 +23,25 @@
         public var body: some View {
             VStack(alignment: .leading, spacing: 0) {
                 header
+                if let subtitle = state.subtitle {
+                    Text(subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 4)
+                }
                 if let banner = state.banner { bannerView(banner).padding(.top, 10) }
                 if state.timeline.held > 0 || state.status != .needsAttention {
-                    TimelineView(model: model).padding(.top, 16)
-                    ticks.padding(.top, 3)
+                    TimelineView(model: model).padding(.top, 22)
                 }
-                if let saving = state.saving {
-                    savingView(saving).padding(.top, 12)
-                } else if model.pendingBookmark != nil {
-                    bookmarkField.padding(.top, 12)
-                } else {
-                    chips.padding(.top, 12)
+                Group {
+                    if let saving = state.saving {
+                        savingView(saving)
+                    } else if model.pendingBookmark != nil {
+                        bookmarkField
+                    } else {
+                        footer
+                    }
                 }
-                tools.padding(.top, 8)
+                .padding(.top, 8)
             }
             .padding(14)
             .frame(width: 380)
@@ -39,29 +50,67 @@
         // MARK: Header
 
         private var header: some View {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    statusDot
-                    Text(state.title).font(.system(size: 13.5, weight: .semibold)).lineLimit(2)
-                    Spacer(minLength: 8)
-                    if let stat = state.stat {
-                        Text(stat).font(.system(size: 12).monospacedDigit()).foregroundStyle(.secondary)
-                            .help("How much audio Tapeloop is keeping, and the memory it uses")
-                    }
+            HStack(spacing: 7) {
+                statusDot
+                Text(state.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                if let stat = state.stat {
+                    Text("· \(stat)").font(.system(size: 12.5).monospacedDigit()).foregroundStyle(.secondary)
+                        .help("How much audio Tapeloop is keeping")
                 }
-                if let subtitle = state.subtitle {
-                    Text(subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Spacer(minLength: 8)
+                moreMenu
             }
         }
 
         @ViewBuilder private var statusDot: some View {
             switch state.status {
-            case .recording: Circle().fill(Tape.amber).frame(width: 9, height: 9)
-            case .paused: Circle().fill(Tape.grey).frame(width: 9, height: 9)
+            case .recording:
+                Circle().fill(Tape.red).frame(width: 8, height: 8)
+                    .background(Circle().fill(Tape.red.opacity(0.18)).frame(width: 14, height: 14))
+            case .paused: Circle().fill(Tape.grey).frame(width: 8, height: 8)
             case .needsAttention: Circle().strokeBorder(Tape.red, lineWidth: 2).frame(width: 9, height: 9)
             }
+        }
+
+        /// Everything that is not the tape or Save: pause, bookmark, quick spans, Library and Settings. A plain button
+        /// that opens a native menu (a SwiftUI `Menu` cannot be drawn into the snapshot images).
+        private var moreMenu: some View {
+            Button {
+                showMoreMenu()
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 26, height: 20)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(ToolButtonStyle())
+            .foregroundStyle(.secondary)
+            .help("More: pause, bookmark, quick spans, Library, Settings")
+            .accessibilityLabel("More")
+            .reportFrame("more", to: model)
+        }
+
+        private func showMoreMenu() {
+            var items: [PopupMenu.Item] = [
+                .init(state.isPaused ? "Resume Recording" : "Pause Recording") { model.actions.togglePause() },
+                .init("Bookmark This Moment", enabled: model.canBookmark) { model.bookmark() },
+                .separator,
+            ]
+            for minutes in PopoverModel.quickSpans {
+                items.append(
+                    .init(
+                        minutes < 60 ? "Select the Last \(minutes) Minutes" : "Select the Last Hour",
+                        enabled: model.quickSpanAvailable(minutes)
+                    ) {
+                        model.choose(minutes: minutes)
+                    })
+            }
+            items += [
+                .separator,
+                .init("Library…") { model.actions.openLibrary() },
+                .init("Settings…") { model.actions.openSettings() },
+            ]
+            PopupMenu.show(items)
         }
 
         // MARK: Banner
@@ -111,65 +160,51 @@
             }
         }
 
-        // MARK: Ticks, chips, saving, bookmark
+        // MARK: Footer
 
-        /// The two ends of the tape: how far back it reaches, and now.
-        private var ticks: some View {
-            HStack {
-                Text(DurationText.tick(state.timeline.span))
-                Spacer(minLength: 0)
-                Text(DurationText.tick(0))
-            }
-            .font(.system(size: 10.5).monospacedDigit())
-            .foregroundStyle(.tertiary)
-        }
-
-        private var chips: some View {
-            let held = state.timeline.held
-            return HStack(spacing: 0) {
-                ForEach(PopoverModel.quickSpans, id: \.self) { minutes in
-                    let enabled =
-                        held > 0 && (minutes == PopoverModel.quickSpans[0] || Double(minutes) * 60 <= held + 30)
-                    Button(minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h") { model.choose(minutes: minutes) }
-                        .buttonStyle(SpanButtonStyle(selected: model.quickMinutes == minutes))
-                        .disabled(!enabled)
-                        .reportFrame("chip-\(minutes)", to: model)
-                        .help("Select the last \(minutes < 60 ? "\(minutes) minutes" : "hour")")
+        /// The span a save would keep (or the preview's progress) and Save.
+        private var footer: some View {
+            HStack(spacing: 8) {
+                if let preview = state.preview {
+                    (Text("▶ Preview").foregroundStyle(Tape.red).fontWeight(.semibold)
+                        + Text("  \(DurationText.clock(preview.elapsed)) of \(DurationText.clock(preview.duration))")
+                        .foregroundStyle(.secondary))
+                        .font(.system(size: 12).monospacedDigit())
+                } else {
+                    (Text("Last ").foregroundStyle(.secondary)
+                        + Text(DurationText.short(model.clampedSelection)).fontWeight(.semibold))
+                        .font(.system(size: 12.5).monospacedDigit())
                 }
                 Spacer(minLength: 6)
-                Button("Save \(DurationText.short(model.clampedSelection))") {
-                    model.actions.save(model.clampedSelection)
-                }
-                .buttonStyle(.tapePrimary)
-                .keyboardShortcut(.defaultAction)
-                .disabled(held <= 0)
-                .reportFrame("save", to: model)
+                Button("Save") { model.actions.save(model.clampedSelection) }
+                    .buttonStyle(.tapePrimary)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(state.timeline.held <= 0)
+                    .help("Save the last \(DurationText.long(model.clampedSelection)) as an audio file")
+                    .reportFrame("save", to: model)
             }
         }
 
+        /// A save in progress: what is being saved, a thin progress bar, and Cancel.
         private func savingView(_ saving: PopoverState.Saving) -> some View {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(saving.label).font(.system(size: 12))
-                    Spacer()
-                    Text("\(Int((saving.progress * 100).rounded())) %").font(.system(size: 12).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Rectangle().fill(Tape.selectedFill)
-                        Rectangle().fill(Tape.amber).frame(width: proxy.size.width * min(1, max(0, saving.progress)))
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text(saving.label).font(.system(size: 12))
+                        Spacer()
+                        Text("\(Int((saving.progress * 100).rounded())) %").font(.system(size: 11.5).monospacedDigit())
+                            .foregroundStyle(.secondary)
                     }
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.primary.opacity(0.12))
+                            Capsule().fill(Color.primary.opacity(0.75))
+                                .frame(width: proxy.size.width * min(1, max(0, saving.progress)))
+                        }
+                    }
+                    .frame(height: 3)
                 }
-                .frame(height: 4)
-                .clipShape(RoundedRectangle(cornerRadius: 1))
-                HStack {
-                    Button("Cancel") { model.actions.cancelSave() }.buttonStyle(.tape).reportFrame("cancel", to: model)
-                    Spacer()
-                    Button("Save \(DurationText.short(model.clampedSelection))") {}.buttonStyle(.tapePrimary).disabled(
-                        true)
-                }
-                .padding(.top, 6)
+                Button("Cancel") { model.actions.cancelSave() }.buttonStyle(.tape).reportFrame("cancel", to: model)
             }
         }
 
@@ -204,73 +239,21 @@
             .onAppear { labelFocused = true }
         }
 
-        // MARK: Tools
-
-        private var tools: some View {
-            HStack(spacing: 0) {
-                Button {
-                    model.actions.togglePause()
-                } label: {
-                    Image(systemName: state.isPaused ? "play.fill" : "pause.fill")
-                }
-                .help(state.isPaused ? "Resume recording" : "Pause recording; what is kept stays")
-                .accessibilityLabel(state.isPaused ? "Resume" : "Pause")
-                .reportFrame("pause", to: model)
-                Button {
-                    model.bookmark()
-                } label: {
-                    Image(systemName: "bookmark")
-                }
-                .disabled(state.isPaused || state.status == .paused)
-                .help("Bookmark this moment")
-                .accessibilityLabel("Bookmark")
-                .reportFrame("bookmark", to: model)
-                Spacer()
-                Button {
-                    model.actions.openLibrary()
-                } label: {
-                    Image(systemName: "books.vertical")
-                }
-                .help("Library: your saved recordings")
-                .accessibilityLabel("Library")
-                .reportFrame("library", to: model)
-                Button {
-                    model.actions.openSettings()
-                } label: {
-                    Image(systemName: "gearshape")
-                }
-                .help("Settings")
-                .accessibilityLabel("Settings")
-                .reportFrame("settings", to: model)
-            }
-            .buttonStyle(ToolButtonStyle())
-            .foregroundStyle(.secondary)
-        }
     }
 
-    /// A quick span (5 min, 15 min, …): plain text, amber when chosen.
-    struct SpanButtonStyle: ButtonStyle {
-        var selected: Bool
-        @Environment(\.isEnabled) private var isEnabled
-
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .font(.system(size: 12, weight: selected ? .semibold : .medium).monospacedDigit())
-                .foregroundStyle(selected ? Tape.amber : Color.secondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(selected ? Tape.amber.opacity(0.14) : .clear))
-                .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.35)
-                .contentShape(Rectangle())
-        }
-    }
-
-    /// The rewind timeline: two level lanes, meetings, gaps, bookmarks, and the draggable selection.
+    /// The rewind tape: one mirrored waveform, the handle with its play button, the preview playhead, and the
+    /// bookmarks and meetings beneath it.
     struct TimelineView: View {
         @Bindable var model: PopoverModel
-        static let height: CGFloat = 70
-        private let laneTops: [CGFloat] = [16, 43]
-        private let laneHeight: CGFloat = 24
+        /// The waveform's height; the marker row for bookmarks and meetings sits below it.
+        static let tapeHeight: CGFloat = 52
+        static let markerHeight: CGFloat = 24
+        static let height: CGFloat = tapeHeight + markerHeight
+        /// Bars: one hairline every `pitch` points.
+        private let pitch: CGFloat = 3
+        private let barWidth: CGFloat = 1
+
+        @State private var knobDrag: (start: CGFloat, moved: Bool)?
 
         private var data: TimelineData { model.state.timeline }
 
@@ -278,20 +261,27 @@
             GeometryReader { proxy in
                 let width = proxy.size.width
                 let selectionX = x(forSecondsBack: model.clampedSelection, width: width)
+                let preview = model.state.preview
+                let playX = preview.map { selectionX + (width - selectionX) * CGFloat($0.fraction) }
                 ZStack(alignment: .topLeading) {
-                    Canvas { context, size in draw(in: &context, size: size, selectionX: selectionX) }
+                    Canvas { context, size in draw(in: &context, size: size, selectionX: selectionX, playX: playX) }
                     if data.held > 0 {
-                        Rectangle().fill(Tape.amber.opacity(0.08))
-                            .frame(width: max(0, width - selectionX), height: Self.height)
-                            .offset(x: selectionX)
+                        if let playX {
+                            Rectangle().fill(Tape.red).frame(width: 1.5, height: Self.tapeHeight).offset(
+                                x: playX - 0.75
+                            )
                             .allowsHitTesting(false)
-                        Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.height).offset(x: selectionX - 0.75)
+                        }
+                        Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.tapeHeight)
+                            .offset(x: selectionX - 0.75)
                             .allowsHitTesting(false)
-                        handle.offset(x: selectionX - 7, y: -2)
+                        knob(playing: preview != nil)
+                            .offset(x: selectionX - 10, y: -10)
+                            .gesture(knobGesture(selectionX: selectionX, width: width))
                     }
                 }
                 .contentShape(Rectangle())
-                .help("Top: your microphone. Bottom: your Mac's sound. Drag to choose how far back to save.")
+                .help("Top: your voice. Bottom: your Mac's sound. Drag to choose how far back to save.")
                 .gesture(
                     DragGesture(minimumDistance: 0).onChanged { value in
                         let target = secondsBack(atX: value.location.x, width: width)
@@ -318,20 +308,41 @@
                 default: break
                 }
             }
+            .accessibilityAction(named: "Preview") { model.actions.togglePreview(model.clampedSelection) }
         }
 
-        private var handle: some View {
-            RoundedRectangle(cornerRadius: 2).fill(Tape.amber)
-                .frame(width: 14, height: 18)
+        /// The handle's top: a round button that plays (or stops) the preview. Dragging it moves the handle.
+        private func knob(playing: Bool) -> some View {
+            Circle().fill(Tape.amber)
+                .frame(width: 20, height: 20)
                 .overlay(
-                    HStack(spacing: 3) {
-                        Rectangle().frame(width: 1.5, height: 8)
-                        Rectangle().frame(width: 1.5, height: 8)
-                    }
-                    .foregroundStyle(Color.black.opacity(0.55))
+                    Image(systemName: playing ? "pause.fill" : "play.fill")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Tape.onAmber)
+                        .offset(x: playing ? 0 : 0.8)
                 )
-                .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
-                .help("Drag to choose how far back to save")
+                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+                .contentShape(Circle().inset(by: -4))
+                .help(playing ? "Stop the preview" : "Play from here, without saving; drag to move")
+                .reportFrame("knob", to: model)
+        }
+
+        /// A click on the knob toggles the preview; a drag of more than a few points moves the handle instead.
+        private func knobGesture(selectionX: CGFloat, width: CGFloat) -> some Gesture {
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    if knobDrag == nil { knobDrag = (selectionX, false) }
+                    guard let drag = knobDrag else { return }
+                    if drag.moved || abs(value.translation.width) > 3 {
+                        knobDrag = (drag.start, true)
+                        let target = secondsBack(atX: drag.start + value.translation.width, width: width)
+                        model.drag(to: target.seconds, pin: target.pinned)
+                    }
+                }
+                .onEnded { _ in
+                    if knobDrag?.moved == false { model.actions.togglePreview(model.clampedSelection) }
+                    knobDrag = nil
+                }
         }
 
         private func x(forSecondsBack seconds: TimeInterval, width: CGFloat) -> CGFloat {
@@ -355,73 +366,82 @@
             width * CGFloat(date.timeIntervalSince(data.start) / data.span)
         }
 
-        private func draw(in context: inout GraphicsContext, size: CGSize, selectionX: CGFloat) {
+        /// The loudest level in the bins under `[x0, x1)`; -1 when there is no audio there.
+        private func level(_ levels: [Float], from x0: CGFloat, to x1: CGFloat, width: CGFloat) -> Float {
+            guard !levels.isEmpty else { return -1 }
+            let count = levels.count
+            let i0 = max(0, min(count - 1, Int(x0 / width * CGFloat(count))))
+            let i1 = max(i0 + 1, min(count, Int(x1 / width * CGFloat(count))))
+            var peak: Float = -1
+            for index in i0..<i1 { peak = max(peak, levels[index]) }
+            return peak
+        }
+
+        private func draw(in context: inout GraphicsContext, size: CGSize, selectionX: CGFloat, playX: CGFloat?) {
             let width = size.width
-            let height = size.height
-            // Meetings.
+            let mid = Self.tapeHeight / 2
+            let reach = mid - 2
+            let rest = Color.primary.opacity(0.26)
+            let kept = Color.primary.opacity(0.85)
+
+            // The centre line.
+            context.fill(
+                Path(CGRect(x: 0, y: mid, width: width, height: 0.5)), with: .color(Color.primary.opacity(0.12)))
+
+            // The waveform: your voice rises above the line, your Mac's sound hangs below it.
+            let voice = data.lanes.first?.levels ?? []
+            let mac = data.lanes.count > 1 ? data.lanes[1].levels : []
+            var restPath = Path()
+            var keptPath = Path()
+            var playedPath = Path()
+            var x: CGFloat = 0
+            while x < width {
+                let up = level(voice, from: x, to: x + pitch, width: width)
+                let down = level(mac, from: x, to: x + pitch, width: width)
+                if up >= 0 || down >= 0 {
+                    var bar = Path()
+                    let upHeight = max(0.8, CGFloat(Self.visual(max(0, up))) * reach)
+                    let downHeight = max(0.8, CGFloat(Self.visual(max(0, down))) * reach * 0.9)
+                    bar.addRect(CGRect(x: x, y: mid - 1 - upHeight, width: barWidth, height: upHeight))
+                    bar.addRect(CGRect(x: x, y: mid + 1.5, width: barWidth, height: downHeight))
+                    if let playX, x >= selectionX, x <= playX {
+                        playedPath.addPath(bar)
+                    } else if x >= selectionX {
+                        keptPath.addPath(bar)
+                    } else {
+                        restPath.addPath(bar)
+                    }
+                }
+                x += pitch
+            }
+            context.fill(restPath, with: .color(rest))
+            context.fill(keptPath, with: .color(kept))
+            context.fill(playedPath, with: .color(Tape.red))
+
+            // Under the tape: meetings (a line with the meeting's name beneath it) and bookmarks (bookmark icons).
+            let markerTop = Self.tapeHeight + 4
             for meeting in data.meetings {
                 let x0 = max(0, xOf(meeting.start, width: width))
                 let x1 = min(width, xOf(meeting.end, width: width))
                 guard x1 > x0 else { continue }
                 context.fill(
-                    Path(CGRect(x: x0, y: 12, width: x1 - x0, height: height - 12)),
-                    with: .color(Tape.meeting.opacity(0.09)))
-                context.fill(Path(CGRect(x: x0, y: 12, width: x1 - x0, height: 1.5)), with: .color(Tape.meeting))
-            }
-            // Gaps (sleep, pause), hatched.
-            for gap in data.gaps {
-                let x0 = max(0, xOf(gap.start, width: width))
-                let x1 = min(width, xOf(gap.end, width: width))
-                guard x1 > x0 else { continue }
-                let rect = CGRect(x: x0, y: 14, width: x1 - x0, height: height - 14)
-                var hatch = Path()
-                var hx = x0 - (height - 14)
-                while hx < x1 {
-                    hatch.move(to: CGPoint(x: hx, y: height))
-                    hatch.addLine(to: CGPoint(x: hx + (height - 14), y: 14))
-                    hx += 6
-                }
-                context.drawLayer { layer in
-                    layer.clip(to: Path(rect))
-                    layer.stroke(hatch, with: .color(Color.primary.opacity(0.12)), lineWidth: 1)
+                    Path(roundedRect: CGRect(x: x0, y: markerTop, width: x1 - x0, height: 2), cornerRadius: 1),
+                    with: .color(Tape.meeting.opacity(0.85)))
+                if let label = meeting.label {
+                    var text = context.resolve(
+                        Text(label).font(.system(size: 9.5, weight: .medium)).foregroundStyle(Tape.meeting))
+                    text.shading = .color(Tape.meeting)
+                    let measured = text.measure(in: CGSize(width: 300, height: 20))
+                    let left = min(max(0, x0), max(0, width - measured.width))
+                    context.draw(text, at: CGPoint(x: left, y: markerTop + 8), anchor: .topLeading)
                 }
             }
-            // Level lanes.
-            for (laneIndex, lane) in data.lanes.enumerated() where laneIndex < laneTops.count {
-                let top = laneTops[laneIndex]
-                let count = max(1, lane.levels.count)
-                let step = width / CGFloat(count)
-                var quiet = Path()
-                var inSelection = Path()
-                var outside = Path()
-                for (index, level) in lane.levels.enumerated() {
-                    let x = CGFloat(index) * step
-                    if level < 0 {
-                        quiet.addRect(CGRect(x: x, y: top + laneHeight / 2, width: max(1, step - 1), height: 0.8))
-                        continue
-                    }
-                    let h = max(1.5, CGFloat(Self.visual(level)) * laneHeight)
-                    let rect = CGRect(x: x + 0.5, y: top + (laneHeight - h) / 2, width: max(1, step - 1), height: h)
-                    if x + step / 2 >= selectionX { inSelection.addRect(rect) } else { outside.addRect(rect) }
-                }
-                context.fill(quiet, with: .color(Color.primary.opacity(0.12)))
-                context.fill(outside, with: .color(Color.primary.opacity(0.3)))
-                context.fill(inSelection, with: .color(Tape.amber))
-            }
-            // Bookmarks.
-            for mark in data.bookmarks {
-                let x = xOf(mark.date, width: width)
-                guard x >= 0, x <= width else { continue }
-                context.fill(
-                    Path(CGRect(x: x, y: 2, width: 1, height: height - 2)), with: .color(Color.primary.opacity(0.35)))
-                var flag = Path()
-                flag.move(to: CGPoint(x: x, y: 2))
-                flag.addLine(to: CGPoint(x: x + 7, y: 2))
-                flag.addLine(to: CGPoint(x: x + 5, y: 4.75))
-                flag.addLine(to: CGPoint(x: x + 7, y: 7.5))
-                flag.addLine(to: CGPoint(x: x, y: 7.5))
-                flag.closeSubpath()
-                context.fill(flag, with: .color(Color.primary.opacity(0.8)))
+            var mark = context.resolve(Image(systemName: "bookmark.fill"))
+            mark.shading = .color(Color.primary.opacity(0.6))
+            for bookmark in data.bookmarks {
+                let bx = xOf(bookmark.date, width: width)
+                guard bx >= 0, bx <= width else { continue }
+                context.draw(mark, in: CGRect(x: bx - 3.5, y: Self.tapeHeight + 1, width: 7, height: 9))
             }
         }
 
@@ -431,6 +451,54 @@
             let db = 20 * log10(level)
             return min(1, max(0.06, (db + 50) / 50))
         }
+    }
+
+    /// A native menu shown at the pointer, built from closures.
+    @MainActor
+    enum PopupMenu {
+        struct Item {
+            var title: String
+            var enabled = true
+            var action: (() -> Void)?
+
+            init(_ title: String, enabled: Bool = true, action: @escaping () -> Void) {
+                self.title = title
+                self.enabled = enabled
+                self.action = action
+            }
+
+            private init() {
+                title = ""
+                action = nil
+            }
+
+            static var separator: Item { Item() }
+        }
+
+        static func show(_ items: [Item]) {
+            let menu = NSMenu()
+            menu.autoenablesItems = false
+            for item in items {
+                guard let action = item.action else {
+                    menu.addItem(.separator())
+                    continue
+                }
+                let target = MenuTarget(action)
+                let entry = NSMenuItem(title: item.title, action: #selector(MenuTarget.fire), keyEquivalent: "")
+                entry.target = target
+                entry.representedObject = target  // the item's target is weak; this keeps it alive
+                entry.isEnabled = item.enabled
+                menu.addItem(entry)
+            }
+            guard let event = NSApp.currentEvent, let view = event.window?.contentView else { return }
+            NSMenu.popUpContextMenu(menu, with: event, for: view)
+        }
+    }
+
+    final class MenuTarget: NSObject {
+        private let action: () -> Void
+        init(_ action: @escaping () -> Void) { self.action = action }
+        @objc func fire() { action() }
     }
 
     extension View {

@@ -66,6 +66,22 @@
             }
         }
 
+        /// Tapeloop's own Core Audio process object, so the system-audio tap can leave out what Tapeloop itself plays
+        /// (a preview, the Library's player). `nil` before Tapeloop has used audio, or below macOS 14.2.
+        public static func ownProcessObject() -> AudioObjectID? {
+            guard #available(macOS 14.2, *) else { return nil }
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyTranslatePIDToProcessObject, mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain)
+            var pid = getpid()
+            var object = AudioObjectID(kAudioObjectUnknown)
+            var size = UInt32(MemoryLayout<AudioObjectID>.size)
+            let status = AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject), &address, UInt32(MemoryLayout<pid_t>.size), &pid, &size,
+                &object)
+            return status == noErr && object != kAudioObjectUnknown ? object : nil
+        }
+
         // MARK: - Helpers
 
         private static func deviceIDs() -> [AudioObjectID] {

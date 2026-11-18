@@ -91,6 +91,45 @@
             XCTAssertFalse(chunks.flatMap(\.levels).isEmpty, "levels are recorded for the waveform")
         }
 
+        func testPreviewPlaysTheSpanAndFinishesWithoutWritingAFile() throws {
+            let mic = try sink(.microphone)
+            let mac = try sink(.system)
+            Tone.feed(mic, frequency: 440, seconds: 3, from: t0)
+            Tone.feed(mac, frequency: 660, seconds: 3, from: t0)
+            let range = TimeRange(start: t0.addingTimeInterval(1), end: t0.addingTimeInterval(2.5))
+            let player = try PreviewPlayer(sources: [source(mic), source(mac)], range: range)
+            XCTAssertEqual(player.duration, 1.5, accuracy: 0.001)
+            player.volume = 0
+            let finished = expectation(description: "the preview reaches the end")
+            do {
+                try player.start { finished.fulfill() }
+            } catch {
+                throw XCTSkip("No audio output on this machine: \(error)")
+            }
+            wait(for: [finished], timeout: 6)
+            XCTAssertGreaterThan(player.elapsed, 1.2, "the position advanced through the span")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path), "a preview writes nothing")
+            player.stop()  // stopping after the end is harmless
+        }
+
+        func testPreviewStopsAtOnce() throws {
+            let mic = try sink(.microphone)
+            Tone.feed(mic, frequency: 440, seconds: 10, from: t0)
+            let player = try PreviewPlayer(
+                sources: [source(mic)], range: TimeRange(start: t0, end: t0.addingTimeInterval(10)))
+            player.volume = 0
+            let finished = expectation(description: "no finish call after stop")
+            finished.isInverted = true
+            do {
+                try player.start { finished.fulfill() }
+            } catch {
+                throw XCTSkip("No audio output on this machine: \(error)")
+            }
+            player.stop()
+            player.stop()
+            wait(for: [finished], timeout: 1.5)
+        }
+
         func testPassthroughSaveIsTrimmedToTheRange() throws {
             let mic = try sink(.microphone)
             Tone.feed(mic, frequency: 440, seconds: 30, from: t0)

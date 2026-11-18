@@ -57,19 +57,19 @@
             name: String, state: PopoverState, selection: TimeInterval, quick: Int?
         )] {
             let recording = PopoverState(
-                status: .recording, title: "Recording to memory", stat: "2 h kept",
+                status: .recording, title: "Recording", stat: "2 h",
                 timeline: timeline(meetings: [(0.52, 0.86, "Zoom · 10:41")], marks: [(0.79, "decision"), (0.2, nil)]))
             var meeting = recording
             meeting.subtitle = nil
             meeting.banner = .meeting(
-                id: UUID(), title: "Zoom meeting", detail: "started 10:41, 38 min so far",
-                calendarTitle: "Weekly sync (from your calendar)")
+                id: UUID(), title: "Zoom meeting", detail: "38 min",
+                calendarTitle: "Weekly sync")
             meeting.timeline = timeline(meetings: [(0.68, 1, "Zoom · now")])
             var saving = recording
             saving.subtitle = nil
             saving.saving = .init(label: "Saving 1 h 00 min…", progress: 0.64)
             var paused = PopoverState(
-                status: .paused, title: "Paused", stat: "1 h 12 min kept",
+                status: .paused, title: "Paused", stat: "1 h 12 min",
                 subtitle: "Paused at 11:02. Nothing is being recorded.",
                 timeline: timeline(gaps: [(0.317, 0.375), (0.82, 1)], meetings: [(0.52, 0.6, nil)]), isPaused: true)
             paused.timeline.lanes = paused.timeline.lanes.map { lane in
@@ -78,7 +78,7 @@
                 return lane
             }
             let started = PopoverState(
-                status: .recording, title: "Recording to memory", stat: "4 min kept",
+                status: .recording, title: "Recording", stat: "4 min",
                 subtitle: "Started at 11:20. Keeps up to 2 hours; older audio is dropped as new audio arrives.",
                 timeline: timeline(hours: 0.25, held: 240, gaps: []))
             let permission = PopoverState(
@@ -89,11 +89,14 @@
                     fixLabel: "Open System Settings", alternativeLabel: "Record microphone only"),
                 timeline: timeline(gaps: [], systemFlat: true))
             let disk = PopoverState(
-                status: .recording, title: "Recording to memory and disk", stat: "5 h kept",
+                status: .recording, title: "Recording", stat: "5 h",
                 subtitle: "The older 1 h 20 min is on disk and is erased when Tapeloop quits.",
                 timeline: timeline(hours: 5, meetings: [(0.52, 0.86, nil)]))
+            var previewing = recording
+            previewing.preview = .init(elapsed: 11 * 60 + 31, duration: 36 * 60)
             return [
-                ("recording", recording, 36 * 60, nil), ("meeting", meeting, 38 * 60, nil),
+                ("recording", recording, 36 * 60, nil), ("previewing", previewing, 36 * 60, nil),
+                ("meeting", meeting, 38 * 60, nil),
                 ("saving", saving, 3600, 60),
                 ("paused", paused, 45 * 60, nil), ("just-started", started, 240, 5),
                 ("needs-permission", permission, 24 * 60, nil), ("disk", disk, 30 * 60, 30),

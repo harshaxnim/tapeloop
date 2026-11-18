@@ -43,6 +43,7 @@
         var popoverIsOpen = false {
             didSet {
                 guard popoverIsOpen != oldValue else { return }
+                if !popoverIsOpen { stopPreview() }
                 // The timeline moves once a second only while it is visible; otherwise nothing wakes the app.
                 timer?.invalidate()
                 timer = nil
@@ -204,7 +205,7 @@
         /// The ongoing meeting, if any.
         var ongoingMeeting: MeetingSpan? { meetings.last { $0.isOngoing } }
 
-        /// One line for the menu's header: "Recording to memory · 2 h kept".
+        /// One line for the menu's header: "Recording · 2 h".
         var menuHeader: String {
             let state = popover.state
             return [state.title, state.stat].compactMap { $0 }.joined(separator: " · ")
@@ -236,7 +237,7 @@
                 gaps: TimelineData.gaps(in: tracks).filter { $0.end > start })
             if held <= 0 { timeline.heldStart = nil }
 
-            let kept = held > 0 ? "\(DurationText.long(held)) kept" : nil
+            let kept = held > 0 ? DurationText.long(held) : nil
             var state: PopoverState
             if let problem = problemBanner() {
                 state = PopoverState(
@@ -254,7 +255,7 @@
             } else if status.bytesOnDisk > 0 {
                 let ramPart = held * Double(status.bytesInRAM) / Double(max(1, status.bytesInRAM + status.bytesOnDisk))
                 state = PopoverState(
-                    status: .recording, title: "Recording to memory and disk", stat: kept,
+                    status: .recording, title: "Recording", stat: kept,
                     subtitle:
                         "The older \(DurationText.long(held - ramPart)) is on disk and is erased when Tapeloop quits.",
                     timeline: timeline)
@@ -265,18 +266,21 @@
                     ? "Started at \(Self.time(status.range?.start ?? now)). Keeps up to \(DurationText.long(settings.recorder.bufferDuration)); older audio is dropped as new audio arrives."
                     : nil
                 state = PopoverState(
-                    status: .recording, title: "Recording to memory", stat: kept, subtitle: subtitle,
+                    status: .recording, title: "Recording", stat: kept, subtitle: subtitle,
                     timeline: timeline)
             }
             if state.banner == nil, let meeting = ongoingMeeting {
                 let minutes = DurationText.long(now.timeIntervalSince(meeting.start))
                 state.banner = .meeting(
                     id: meeting.id, title: "\(meeting.info.appName) meeting",
-                    detail: "started \(Self.time(meeting.start)), \(minutes) so far",
-                    calendarTitle: meeting.info.calendarTitle.map { "\($0) (from your calendar)" })
+                    detail: minutes,
+                    calendarTitle: meeting.info.calendarTitle)
                 state.subtitle = nil
             }
             if saveTask != nil { state.saving = .init(label: savingLabel, progress: savingProgress) }
+            if let previewPlayer {
+                state.preview = .init(elapsed: previewPlayer.elapsed, duration: previewPlayer.duration)
+            }
             return state
         }
 
@@ -322,6 +326,7 @@
             var actions = PopoverActions()
             actions.save = { [weak self] seconds in self?.saveLast(seconds: seconds) }
             actions.cancelSave = { [weak self] in self?.saveTask?.cancel() }
+            actions.togglePreview = { [weak self] seconds in self?.togglePreview(seconds: seconds) }
             actions.togglePause = { [weak self] in self?.togglePause() }
             actions.bookmark = { [weak self] in self?.addBookmark() }
             actions.labelBookmark = { [weak self] date, label in self?.labelBookmark(at: date, label) }
@@ -385,6 +390,67 @@
             }
         }
 
+        // MARK: - Preview
+
+        private var previewPlayer: PreviewPlayer?
+        private var previewPreparing = false
+        private var previewTimer: Timer?
+
+        /// Plays the last `seconds` seconds without saving them, or stops the preview that is playing.
+        func togglePreview(seconds: TimeInterval) {
+            if previewPlayer != nil || previewPreparing {
+                stopPreview()
+                return
+            }
+            let now = Date()
+            let range = TimeRange(start: now.addingTimeInterval(-min(seconds, max(1, held))), end: now)
+            let pieces = engine.exportPieces(for: range)
+            guard !pieces.isEmpty else { return }
+            previewPreparing = true
+            Task { [weak self] in
+                // Reading the disk part (if any) and preparing the decoders happen off the main thread.
+                let player = await Task.detached(priority: .userInitiated) { () -> PreviewPlayer? in
+                    let sources = pieces.map {
+                        ExportSource(
+                            source: $0.source, chunks: $0.loadChunks(), streamDescription: $0.streamDescription,
+                            magicCookie: $0.magicCookie)
+                    }
+                    return try? PreviewPlayer(sources: sources, range: range)
+                }.value
+                guard let self, self.previewPreparing else {
+                    player?.stop()
+                    return
+                }
+                self.previewPreparing = false
+                guard let player else { return }
+                do {
+                    try player.start { [weak self] in MainActor.assumeIsolated { self?.stopPreview() } }
+                } catch {
+                    self.log.error("Preview failed: \(String(describing: error), privacy: .public)")
+                    return
+                }
+                self.previewPlayer = player
+                let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self, let player = self.previewPlayer else { return }
+                        self.popover.state.preview = .init(elapsed: player.elapsed, duration: player.duration)
+                    }
+                }
+                RunLoop.main.add(timer, forMode: .common)
+                self.previewTimer = timer
+                self.popover.state.preview = .init(elapsed: 0, duration: player.duration)
+            }
+        }
+
+        func stopPreview() {
+            previewPreparing = false
+            previewTimer?.invalidate()
+            previewTimer = nil
+            previewPlayer?.stop()
+            previewPlayer = nil
+            if popover.state.preview != nil { popover.state.preview = nil }
+        }
+
         // MARK: - Saving
 
         var isSaving: Bool { saveTask != nil }
@@ -404,6 +470,7 @@
             range: TimeRange, meeting explicitMeeting: MeetingInfo? = nil, then: (@MainActor (Bool) -> Void)? = nil
         ) {
             guard saveTask == nil else { return }
+            stopPreview()
             let pieces = engine.exportPieces(for: range)
             guard !pieces.isEmpty else {
                 Notifier.shared.post(.nothingToSave)

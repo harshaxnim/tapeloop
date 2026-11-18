@@ -62,7 +62,9 @@
         /// Call with the lock held.
         private func startTap() throws {
             guard let onBuffer else { return }
-            let objects = AudioDevices.processObjects(matching: excluded)
+            // Excluded apps, and Tapeloop itself: a preview or the Library's player must not record itself.
+            let objects =
+                AudioDevices.processObjects(matching: excluded) + [AudioDevices.ownProcessObject()].compactMap { $0 }
             let description = CATapDescription(stereoGlobalTapButExcludeProcesses: objects)
             description.name = "Tapeloop"
             description.muteBehavior = .unmuted

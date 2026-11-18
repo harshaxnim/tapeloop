@@ -92,20 +92,22 @@
       <p>Tapeloop lives in the menu bar as a small cassette. The dot in its corner shows what it is doing.</p>
       <figure class="mid"><img src="/img/docs/menubar-icons.png" alt="The cassette icon while recording, paused, and when it needs a permission" width="422" height="108" loading="lazy"><figcaption>Amber dot: recording. Grey dot: paused. Red ring: a permission is missing or a source stopped.</figcaption></figure>
       <p><strong>Click</strong> the icon to open the popover. <strong>Right-click</strong> it for a menu with quick saves, Bookmark Moment, Pause, Library, Settings and Quit.</p>
-      <figure class="narrow"><img src="/img/docs/popover-recording.png" alt="The popover: a two-lane timeline with a meeting band, bookmarks, quick spans and a Save button" width="380" height="215" loading="lazy"><figcaption>The tape runs from the oldest audio on the left to now on the right.</figcaption></figure>
+      <figure class="narrow"><img src="/img/docs/popover-recording.png" alt="The popover: a mirrored tape with the handle and its play button, bookmarks and a meeting under the tape, and Save" width="380" height="187" loading="lazy"><figcaption>The tape runs from the oldest audio on the left to now on the right.</figcaption></figure>
       <ul>
-        <li><strong>Top line:</strong> what Tapeloop is doing and how much it keeps ("2 h kept"). Settings › Memory shows the memory it uses.</li>
-        <li><strong>Timeline:</strong> the top lane is your microphone and the bottom lane your Mac's sound. Blue bands are meetings, flags are bookmarks, hatched stretches are gaps.</li>
-        <li><strong>Handle:</strong> the amber handle marks how far back a save reaches.</li>
-        <li><strong>Bottom row:</strong> Pause and Bookmark on the left, Library and Settings on the right. Hold the pointer over a button to see its name.</li>
+        <li><strong>Top line:</strong> a red dot while recording (grey when paused), and how much is kept ("2 h"). The <strong>•••</strong> button holds Pause, Bookmark, quick spans (the last 5, 15 or 30 minutes or the last hour), Library and Settings.</li>
+        <li><strong>Tape:</strong> your voice rises above the centre line and your Mac's sound hangs below it. The span to the right of the handle, the part a save keeps, is drawn brighter.</li>
+        <li><strong>Under the tape:</strong> bookmark icons, and a blue line for each meeting with its name below it.</li>
+        <li><strong>Bottom line:</strong> the span a save keeps ("Last 36 min") and <strong>Save</strong>.</li>
       </ul>
     </section>
 
     <section id="saving">
       <h2>Saving</h2>
       <h3>From the popover</h3>
-      <p>Drag the amber handle to the left, or click <strong>5 min</strong>, <strong>15 min</strong>, <strong>30 min</strong> or <strong>1 h</strong>. Drag it all the way left to save everything kept. Then click <strong>Save</strong> or press Return. A long save shows its progress with Cancel; when it is done, a notification offers <strong>Play</strong> and <strong>Show in Finder</strong>.</p>
-      <figure class="narrow"><img src="/img/docs/popover-saving.png" alt="The popover while saving: a progress bar with Cancel" width="380" height="252" loading="lazy"></figure>
+      <p>Drag the amber handle to the left, or choose a quick span from the <strong>•••</strong> menu. Drag it all the way left to save everything kept. Then click <strong>Save</strong> or press Return. A long save shows its progress with Cancel; when it is done, a notification offers <strong>Play</strong> and <strong>Show in Finder</strong>.</p>
+      <h3>Listen before you save</h3>
+      <p>Click the play button on top of the handle to hear the span from the handle onwards, without saving anything. The part already played turns red and the bottom line shows the position. Click again to stop; moving the handle or closing the popover stops it too. Drag the play button to move the handle.</p>
+      <figure class="narrow"><img src="/img/docs/popover-previewing.png" alt="The popover while previewing: the played part is red and the bottom line shows 11:31 of 36:00" width="380" height="187" loading="lazy"><figcaption>Previewing the last 36 minutes.</figcaption></figure>
       <h3>From anywhere</h3>
       <p>Press <kbd>⌃⌥S</kbd> to save the last 5 minutes (change the length and keys in Settings › Shortcuts), or right-click the icon and choose Save Last 5, 15 or 30 Minutes or Save Last Hour.</p>
       <h3>Files</h3>
@@ -116,25 +118,25 @@
 
     <section id="bookmarks">
       <h2>Bookmarks</h2>
-      <p>A bookmark marks a moment so you can find it later. Click <strong>Bookmark</strong> in the popover and type an optional label, press <kbd>⌃⌥B</kbd> in any app, or choose Bookmark Moment from the right-click menu. Bookmarks show as flags on the timeline, travel with a save, and let the Library's player jump to them.</p>
+      <p>A bookmark marks a moment so you can find it later. Choose <strong>Bookmark This Moment</strong> from the popover's ••• menu and type an optional label, press <kbd>⌃⌥B</kbd> in any app, or choose Bookmark Moment from the right-click menu. Bookmarks show as small bookmark icons under the tape, travel with a save, and let the Library's player jump to them.</p>
     </section>
 
     <section id="pausing">
       <h2>Pausing and gaps</h2>
-      <p>Click <strong>Pause</strong>, press <kbd>⌃⌥P</kbd>, or use the right-click menu. What Tapeloop already keeps stays; nothing new is recorded until you resume. Tapeloop always pauses while the Mac sleeps, and can pause while the screen is locked (Settings › Recording). A pause shows as a hatched gap, and a save across it skips the silent time.</p>
-      <figure class="narrow"><img src="/img/docs/popover-paused.png" alt="The popover while paused" width="380" height="231" loading="lazy"></figure>
+      <p>Choose <strong>Pause Recording</strong> from the ••• menu, press <kbd>⌃⌥P</kbd>, or use the right-click menu. What Tapeloop already keeps stays; nothing new is recorded until you resume. Tapeloop always pauses while the Mac sleeps, and can pause while the screen is locked (Settings › Recording). A pause shows as a break in the tape, and a save across it skips the silent time.</p>
+      <figure class="narrow"><img src="/img/docs/popover-paused.png" alt="The popover while paused" width="380" height="205" loading="lazy"></figure>
     </section>
 
     <section id="meetings">
       <h2>Meetings and your calendar</h2>
-      <p>Tapeloop notices calls without any permission. When a known call app has used your microphone for about 5 seconds, a meeting starts: a blue band appears and the popover offers <strong>Save meeting</strong>. It ends about 10 seconds after the app stops using the microphone, so a short mute does not split it. When a meeting of at least a minute ends, a notification offers to save it, or Tapeloop can save every meeting automatically (Settings › Meetings).</p>
+      <p>Tapeloop notices calls without any permission. When a known call app has used your microphone for about 5 seconds, a meeting starts: a blue line with the app's name appears under the tape, and the popover offers <strong>Save meeting</strong>. It ends about 10 seconds after the app stops using the microphone, so a short mute does not split it. When a meeting of at least a minute ends, a notification offers to save it, or Tapeloop can save every meeting automatically (Settings › Meetings).</p>
       <p><strong>Recognised apps:</strong> Zoom, Microsoft Teams, FaceTime, Slack huddles, Webex, Discord, Skype, WhatsApp, Telegram, Signal, and calls in Chrome, Safari, Arc, Firefox, Edge and Brave (for example Google Meet). Meeting detection needs macOS 14.2 or later.</p>
       <p><strong>Calendar titles</strong> (optional): turn on <strong>Use calendar event titles</strong> in Settings › Meetings and allow access to your calendars. Meetings and recordings are then named after the event they overlap most.</p>
     </section>
 
     <section id="library">
       <h2>The Library</h2>
-      <p>Open the Library from the popover, the right-click menu, or <kbd>⌘L</kbd> while a Tapeloop window is open.</p>
+      <p>Open the Library from the popover's ••• menu, the right-click menu, or <kbd>⌘L</kbd> while a Tapeloop window is open.</p>
       <figure><img src="/img/docs/library-transcribing.png" alt="The Library: recordings by day, a player with waveform and a transcript" width="800" height="496" loading="lazy"></figure>
       <ul>
         <li><strong>List:</strong> recordings grouped by day, newest first, with their length and a Meeting tag.</li>
@@ -167,7 +169,7 @@
 
     <section id="settings">
       <h2>Settings</h2>
-      <p>Open Settings from the popover's gear, the right-click menu, or <kbd>⌘,</kbd>. Changes take effect at once.</p>
+      <p>Open Settings from the popover's ••• menu, the right-click menu, or <kbd>⌘,</kbd>. Changes take effect at once.</p>
       <figure><img src="/img/docs/settings-memory.png" alt="Settings, Memory tab" width="640" height="420" loading="lazy"><figcaption>Settings › Memory.</figcaption></figure>
       <div class="table"><table>
         <tr><th>Tab</th><th>What you can set</th></tr>

@@ -32,6 +32,11 @@
             var actions = PopoverActions()
             actions.save = { [unowned self] in self.calls.append("save \(Int($0.rounded()))") }
             actions.cancelSave = { [unowned self] in self.calls.append("cancel") }
+            actions.togglePreview = { [unowned self] seconds in
+                self.calls.append("preview \(Int(seconds.rounded()))")
+                let model = self.model
+                model.state.preview = model.state.preview == nil ? .init(elapsed: 0, duration: seconds) : nil
+            }
             actions.togglePause = { [unowned self] in self.calls.append("pause") }
             actions.bookmark = { [unowned self] in
                 self.calls.append("bookmark")
