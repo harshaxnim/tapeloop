@@ -171,15 +171,38 @@
         ) -> [Float] {
             var bins = [Float](repeating: -1, count: count)
             let span = max(1, end.timeIntervalSince(start))
+            let binLength = span / Double(count)
             for piece in track {
                 guard !piece.levels.isEmpty else { continue }
-                let step = piece.duration / Double(piece.levels.count)
-                for (index, level) in piece.levels.enumerated() {
+                let levels = piece.levels
+                let step = piece.duration / Double(levels.count)
+                // Bins wider than a reading keep the loudest reading inside them.
+                for (index, level) in levels.enumerated() {
                     let t = piece.start.addingTimeInterval(Double(index) * step + step / 2)
                     let f = t.timeIntervalSince(start) / span
                     guard f >= 0, f < 1 else { continue }
                     let bin = min(count - 1, Int(f * Double(count)))
                     bins[bin] = max(bins[bin], level)
+                }
+                // Every bin whose centre lies in the piece gets a value too, interpolated between the two nearest
+                // readings: a short tape (a few readings, many bins) is then evenly filled instead of sparse.
+                guard step > binLength / 2 else { continue }
+                let first = max(0, Int((piece.start.timeIntervalSince(start) / binLength).rounded(.down)))
+                let last = min(
+                    count - 1,
+                    Int(
+                        (piece.start.addingTimeInterval(piece.duration).timeIntervalSince(start) / binLength).rounded(
+                            .up)))
+                guard first <= last else { continue }
+                for bin in first...last {
+                    let centre = start.addingTimeInterval((Double(bin) + 0.5) * binLength)
+                    let offset = centre.timeIntervalSince(piece.start)
+                    guard offset >= 0, offset <= piece.duration else { continue }
+                    let position = min(max(offset / step - 0.5, 0), Double(levels.count - 1))
+                    let lower = Int(position.rounded(.down))
+                    let upper = min(lower + 1, levels.count - 1)
+                    let t = Float(position - Double(lower))
+                    bins[bin] = max(bins[bin], levels[lower] * (1 - t) + levels[upper] * t)
                 }
             }
             return bins

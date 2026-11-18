@@ -91,6 +91,18 @@
                 status: .recording, title: "Recording", stat: "5 h",
                 subtitle: "The older 1 h 20 min is on disk and is erased when Tapeloop quits.",
                 timeline: timeline(hours: 5, meetings: [(0.52, 0.86, nil)]))
+            // Twenty seconds after starting, built the way the app builds it: a reading every half second.
+            var fresh = PopoverState(
+                status: .recording, title: "Recording", stat: "20 s", timeline: timeline(hours: 20.0 / 3600, gaps: []))
+            let freshStart = now.addingTimeInterval(-20)
+            fresh.timeline.lanes = [(11, 0.25, 0.5), (23, 0.15, 0.55)].enumerated().map { index, lane in
+                let readings = levels(40, seed: UInt64(lane.0), base: Float(lane.1), amplitude: Float(lane.2)).map {
+                    max(0, $0)
+                }
+                return .init(
+                    label: index == 0 ? "You" : "System",
+                    levels: TimelineData.bin([(freshStart, 20, readings)], from: freshStart, to: now, count: 120))
+            }
             var previewing = recording
             previewing.preview = .init(elapsed: 11 * 60 + 31, duration: 36 * 60)
             var trimmed = recording
@@ -98,7 +110,7 @@
             return [
                 ("recording", recording, 36 * 60, nil), ("previewing", previewing, 36 * 60, nil),
                 ("meeting", meeting, 38 * 60, nil), ("meeting-selected", recording, 36 * 60, nil),
-                ("trimmed", trimmed, 36 * 60, nil),
+                ("trimmed", trimmed, 36 * 60, nil), ("fresh", fresh, 20, nil),
                 ("bookmark-hover", recording, 36 * 60, nil),
                 ("saving", saving, 3600, 60),
                 ("paused", paused, 45 * 60, nil), ("just-started", started, 240, 5),

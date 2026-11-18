@@ -286,8 +286,8 @@
                             )
                             .allowsHitTesting(false)
                         }
-                        Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.tapeHeight)
-                            .offset(x: selectionX - 0.75)
+                        Rectangle().fill(Tape.amber).frame(width: 2.5, height: Self.tapeHeight)
+                            .offset(x: selectionX - 1.25)
                             .allowsHitTesting(false)
                         handleLabel(knobX: selectionX, width: width)
                         knob(playing: preview != nil)
@@ -346,7 +346,7 @@
         private func endHandle(visible: Bool, shift: CGFloat) -> some View {
             // Only the drawing fades: the grab area is always there, so a drag that starts as the handle appears works.
             ZStack {
-                Rectangle().fill(Tape.amber).frame(width: 1.5, height: Self.tapeHeight)
+                Rectangle().fill(Tape.amber).frame(width: 2.5, height: Self.tapeHeight)
                 Capsule().fill(Tape.amber)
                     .frame(width: 7, height: 20)
                     .overlay(Capsule().fill(Tape.onAmber.opacity(0.5)).frame(width: 1.5, height: 9))
