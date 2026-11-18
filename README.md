@@ -69,7 +69,7 @@ macOS 14 or later; system audio needs macOS 14.2. The full guide is at
 ## Build from source
 
 ```sh
-make app      # build/Tapeloop.app (run scripts/dev-signing.sh once so rebuilds keep their permissions)
+make app      # build/Tapeloop.app (local builds keep their permissions across rebuilds)
 make test     # 142 tests
 make dmg      # build/Tapeloop-0.1.0.dmg
 ```

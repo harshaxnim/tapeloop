@@ -4,8 +4,10 @@
 #   2. SIGN_IDENTITY: the named code-signing identity from your keychains.
 #   3. The local identity made by scripts/dev-signing.sh (in ~/.tapeloop-signing).
 #   4. Ad hoc ("-"), which needs no certificate.
-# Options 1 to 3 keep the app's identity the same from build to build, so macOS keeps its permissions. An ad-hoc
-# signature identifies the app by the hash of its code, so macOS asks for the permissions again after each rebuild.
+# Options 1 to 3 keep the app's identity the same from build to build, so macOS keeps its permissions. A plain ad-hoc
+# signature identifies the app by the hash of its code, so macOS would ask for the permissions again after each
+# rebuild. Local ad-hoc builds (not CI) therefore carry a designated requirement on the bundle identifier alone, which
+# every rebuild satisfies. Releases never do this: any app with that identifier would then match the permissions.
 set -euo pipefail
 APP="$1"
 ENT="$(dirname "$0")/../Resources/Tapeloop.entitlements"
@@ -19,8 +21,9 @@ sign_bundle() {
     [[ -e "$framework" ]] || continue
     codesign --force "$@" -s "$identity" "$framework"
   done
-  codesign --force "$@" --entitlements "$ENT" -s "$identity" "$APP"
+  codesign --force "$@" "${APP_ONLY[@]}" --entitlements "$ENT" -s "$identity" "$APP"
 }
+APP_ONLY=()
 
 if [[ -n "${MACOS_CERT_P12:-}" && -n "${MACOS_CERT_PASSWORD:-}" ]]; then
   KEYCHAIN="$RUNNER_TEMP/tapeloop-signing.keychain-db"
@@ -43,8 +46,13 @@ elif DEV_DIR="${TAPELOOP_SIGNING_DIR:-$HOME/.tapeloop-signing}" \
   security unlock-keychain -p "$(cat "$DEV_DIR/password")" "$DEV_DIR/tapeloop-dev.keychain-db"
   echo "Signing with the local identity from scripts/dev-signing.sh"
   sign_bundle "Tapeloop Local Signing" --keychain "$DEV_DIR/tapeloop-dev.keychain-db"
+elif [[ -z "${CI:-}" ]]; then
+  BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")"
+  echo "No signing certificate: signing ad hoc for this Mac, identified by $BUNDLE_ID so permissions survive rebuilds"
+  APP_ONLY=(--requirements "=designated => identifier \"$BUNDLE_ID\"")
+  sign_bundle -
 else
-  echo "No signing certificate: signing ad hoc (run scripts/dev-signing.sh so macOS keeps the permissions)"
+  echo "No signing certificate: signing ad hoc"
   sign_bundle -
 fi
 codesign --verify --deep --strict --verbose=2 "$APP"
