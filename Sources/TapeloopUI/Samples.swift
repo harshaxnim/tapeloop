@@ -71,7 +71,6 @@
             saving.saving = .init(label: "Saving 1 h 00 min…", progress: 0.64)
             var paused = PopoverState(
                 status: .paused, title: "Paused", stat: "1 h 12 min",
-                subtitle: "Paused at 11:02. Nothing is being recorded.",
                 timeline: timeline(gaps: [(0.317, 0.375), (0.82, 1)], meetings: [(0.52, 0.6, nil)]), isPaused: true)
             paused.timeline.lanes = paused.timeline.lanes.map { lane in
                 var lane = lane
@@ -80,7 +79,6 @@
             }
             let started = PopoverState(
                 status: .recording, title: "Recording", stat: "4 min",
-                subtitle: "Started at 11:20. Keeps up to 2 hours; older audio is dropped as new audio arrives.",
                 timeline: timeline(hours: 0.25, held: 240, gaps: []))
             let permission = PopoverState(
                 status: .needsAttention, title: "System audio is not being recorded",

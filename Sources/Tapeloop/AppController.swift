@@ -245,12 +245,11 @@
                     timeline: timeline,
                     isPaused: status.isPaused)
             } else if status.isPaused || !status.isRecording {
-                let since = pausedAt.map { "Paused at \(Self.time($0)). " } ?? ""
+                // The header says Paused; a line only explains a pause the user did not make.
                 state = PopoverState(
                     status: .paused, title: "Paused", stat: kept,
                     subtitle: suspendReasons.isEmpty || status.isPaused
-                        ? "\(since)Nothing is being recorded."
-                        : "Recording pauses while the Mac sleeps or the screen is locked.",
+                        ? nil : "Recording pauses while the Mac sleeps or the screen is locked.",
                     timeline: timeline, isPaused: status.isPaused)
             } else if status.bytesOnDisk > 0 {
                 let ramPart = held * Double(status.bytesInRAM) / Double(max(1, status.bytesInRAM + status.bytesOnDisk))
@@ -260,14 +259,7 @@
                         "The older \(DurationText.long(held - ramPart)) is on disk and is erased when Tapeloop quits.",
                     timeline: timeline)
             } else {
-                // A hint only while the tape is new; after that the header is a single line.
-                let subtitle: String? =
-                    held < 600
-                    ? "Started at \(Self.time(status.range?.start ?? now)). Keeps up to \(DurationText.long(settings.recorder.bufferDuration)); older audio is dropped as new audio arrives."
-                    : nil
-                state = PopoverState(
-                    status: .recording, title: "Recording", stat: kept, subtitle: subtitle,
-                    timeline: timeline)
+                state = PopoverState(status: .recording, title: "Recording", stat: kept, timeline: timeline)
             }
             if state.banner == nil, let meeting = ongoingMeeting {
                 let minutes = DurationText.long(now.timeIntervalSince(meeting.start))

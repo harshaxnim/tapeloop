@@ -200,10 +200,9 @@ item, and write down anything unexpected with the time, so it can be found in th
 
 ### 3.2 Popover states
 
-- [ ] **Just started:** "Recording to memory", subtitle "Started at … Keeps up to 2 h …", the stat shows the held
-      time and the memory used.
-- [ ] **Recording** after 10 minutes: subtitle "Nothing is written to disk until you save."
-- [ ] **Paused:** the icon dot turns grey; title "Paused", "Paused at HH:MM. Nothing is being recorded."
+- [ ] **Recording:** a red dot, "Recording · 4 min" (the time held), and no line under it.
+- [ ] **Paused:** the icon dot turns grey; title "Paused" and no line under it. (Paused by sleep or a locked screen:
+      one line says so.)
 - [ ] **Needs permission:** with the microphone denied, the icon shows a red ring and a red banner explains it, with
       **Open System Settings** and **Record system audio only**.
 - [ ] **Meeting:** during a call, a blue banner "Zoom meeting · started …" with **Save meeting**.
