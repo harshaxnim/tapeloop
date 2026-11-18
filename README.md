@@ -38,8 +38,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/popover-recording-dark.png">
-    <img alt="The Tapeloop popover: one tape with your voice above the line and your Mac's sound below, the amber handle with its play button, a bookmark and a meeting under the tape, and Save" src="docs/images/popover-recording-light.png" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.png">
+    <img alt="A Mac menu bar with the Tapeloop cassette, and the Tapeloop popover below it: one tape with your voice above the line and your Mac's sound below, the amber handle with its play button, a bookmark and a meeting under the tape, and Save" src="docs/images/hero-light.png" width="860">
   </picture>
 </p>
 
